@@ -14,6 +14,7 @@ RUN apt update && \
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
+# there is a lot of work to do here that cna be understood from the Travis build scripts.
 # TODO vertical datum support
 #RUN mkdir /vdatum \
 #    && cd /vdatum \

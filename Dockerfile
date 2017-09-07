@@ -1,5 +1,6 @@
 FROM openjdk:8u141-jdk-slim
 
+#TODO temp
 # Install Proj4
 # https://github.com/OSGeo/proj.4/blob/57a07c119ae08945caa92b29c4b427b57f1f728d/Dockerfile
 # Setup build env

@@ -1,16 +1,16 @@
-FROM openjdk:8u131-jdk-alpine
+FROM openjdk:8u141-jdk-slim
 
 # Install Proj4
 # https://github.com/OSGeo/proj.4/blob/57a07c119ae08945caa92b29c4b427b57f1f728d/Dockerfile
 # Setup build env
 RUN mkdir /build
-RUN apk update && \
-    apk add git && \
-    apk add automake && \
-    apk add autoconf && \
-    apk add libtool && \
-    apk add build-base && \
-    apk add make
+RUN apt update && \
+    apt install -y git \
+    automake \
+    autoconf \
+    libtool \
+    build-essential \
+    make
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
@@ -36,4 +36,3 @@ RUN git clone https://github.com/OSGeo/proj.4.git \
     && CFLAGS=-I$JAVA_HOME/include/linux ./configure --with-jni=$JAVA_HOME/include --prefix=/usr/local \
     && make -j 8 \
     && make install
-

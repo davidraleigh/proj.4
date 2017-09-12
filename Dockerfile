@@ -59,7 +59,7 @@ FROM openjdk:8u141-jdk-slim
 
 WORKDIR /opt/src
 COPY --from=builder /opt/src/proj.4 .
-WORKDIR /usr
+WORKDIR /usr/local
 COPY --from=builder /usr/local .
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 

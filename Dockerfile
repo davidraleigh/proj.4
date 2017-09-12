@@ -5,7 +5,8 @@ RUN apt update && \
     autoconf \
     libtool \
     build-essential \
-    make
+    make \
+    wget
 
 WORKDIR /opt/src
 RUN git clone https://github.com/OSGeo/proj.4.git

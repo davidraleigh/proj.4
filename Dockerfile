@@ -1,5 +1,5 @@
-# Test and CI builder
 FROM openjdk:8u141-jdk-slim as builder
+# Test and CI builder
 RUN apt update && \
     apt install -y git \
     automake \

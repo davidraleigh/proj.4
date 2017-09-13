@@ -25,7 +25,7 @@ RUN ./autogen.sh && \
     make install && \
     cd jniwrap && \
     ant && \
-    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/libs
+    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
 
 # Horizontal datums to improve test results
 WORKDIR /usr/local/share/proj

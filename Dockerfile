@@ -69,8 +69,8 @@ RUN python3 test_json.py 5101.2-jhs.json 5101.3-jhs.json 5102.1.json 5103.1.json
 # Production build
 FROM openjdk:8u141-jdk-slim
 
-WORKDIR /opt/src
-COPY --from=builder /opt/src/proj.4 .
+#WORKDIR /opt/src
+#COPY --from=builder /opt/src/proj.4 .
 WORKDIR /usr/local
 COPY --from=builder /usr/local .
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")

@@ -1,4 +1,5 @@
-FROM openjdk:8u141-jdk-slim as builder
+FROM openjdk:8u141-jdk-slim
+#FROM openjdk:8u141-jdk-slim as builder
 # Test and CI builder
 RUN apt update && \
     apt install -y git \
@@ -7,7 +8,8 @@ RUN apt update && \
     libtool \
     build-essential \
     make \
-    wget
+    wget \
+    ant
 
 WORKDIR /opt/src
 RUN git clone https://github.com/OSGeo/proj.4.git && \
@@ -16,10 +18,15 @@ RUN git clone https://github.com/OSGeo/proj.4.git && \
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 WORKDIR /opt/src/proj.4
+
+# CC="ccache gcc" CFLAGS="-g -Wfloat-conversion -Wall -Wextra -Werror -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Werror=format-security -Wshadow -O2"
 RUN ./autogen.sh && \
     CFLAGS=-I$JAVA_HOME/include/linux ./configure --with-jni=$JAVA_HOME/include --prefix=/usr/local && \
     make -j 8 && \
-    make install
+    make install && \
+    cd jniwrap && \
+    ant && \
+    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/libs
 
 # Horizontal datums to improve test results
 WORKDIR /usr/local/share/proj
@@ -29,9 +36,8 @@ RUN wget -qO- -O tmp.zip http://download.osgeo.org/proj/proj-datumgrid-1.6.zip &
     wget http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx
 
 # TODO vertical datum support
-RUN mkdir /vdatum \
-    && cd /vdatum \
-    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2012.zip && unzip -j -u usa_geoid2012.zip -d /usr/local/share/proj \
+WORKDIR /vdatum
+RUN wget http://download.osgeo.org/proj/vdatum/usa_geoid2012.zip && unzip -j -u usa_geoid2012.zip -d /usr/local/share/proj \
     && wget http://download.osgeo.org/proj/vdatum/usa_geoid2009.zip && unzip -j -u usa_geoid2009.zip -d /usr/local/share/proj \
     && wget http://download.osgeo.org/proj/vdatum/usa_geoid2003.zip && unzip -j -u usa_geoid2003.zip -d /usr/local/share/proj \
     && wget http://download.osgeo.org/proj/vdatum/usa_geoid1999.zip && unzip -j -u usa_geoid1999.zip -d /usr/local/share/proj \
@@ -42,26 +48,33 @@ RUN mkdir /vdatum \
     && wget http://download.osgeo.org/proj/vdatum/egm08_25/egm08_25.gtx && mv egm08_25.gtx /usr/local/share/proj \
     && rm -rf /vdatum
 
-ENV PROJ_LIB=/opt/src/proj.4/nad
+ENV PROJ_LIB=/usr/local/share/proj
 WORKDIR /opt/src/proj.4
 RUN make check && \
     cd src && \
     make multistresstest && \
     make test228
 
-WORKDIR /opt/src/proj.4/src
-RUN ./multistresstest
+#RUN ./multistresstest
 WORKDIR /opt/src/proj.4/nad
-RUN for file in ./test*; do $file 2>/dev/null; done
 
-# Production build
-FROM openjdk:8u141-jdk-slim
+RUN apt update && apt install -y python3
+RUN apt-get install -y python3-pip
+RUN apt-get install -y python3-dev
 
-WORKDIR /opt/src
-COPY --from=builder /opt/src/proj.4 .
-WORKDIR /usr/local
-COPY --from=builder /usr/local .
-RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
-
-ENV PROJ_LIB=/usr/local/share/proj
+RUN pip3 install -v --user pyproj
+WORKDIR /opt/src/proj.4/test/gigs
+RUN python3 test_json.py --test conversion 5101.1-jhs.json 5101.4-jhs-etmerc.json 5105.2.json 5106.json 5108.json 5110.json 5111.1.json
+RUN python3 test_json.py 5101.2-jhs.json 5101.3-jhs.json 5102.1.json 5103.1.json 5103.2.json 5103.3.json 5107.json 5109.json 5112.json 5113.json 5201.json 5208.json
+#
+## Production build
+#FROM openjdk:8u141-jdk-slim
+#
+#WORKDIR /opt/src
+#COPY --from=builder /opt/src/proj.4 .
+#WORKDIR /usr/local
+#COPY --from=builder /usr/local .
+#RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
+#
+#ENV PROJ_LIB=/usr/local/share/proj
 

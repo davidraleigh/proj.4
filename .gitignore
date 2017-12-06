@@ -91,3 +91,8 @@ cmake/project-config*.cmake
 /src/test228
 
 /docs/build
+/jniwrap/classes
+/jniwrap/libs
+.DS_Store
+.gradle
+.idea

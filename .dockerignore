@@ -1,0 +1,10 @@
+.git
+./docs
+./cmake-build-debug
+./jniwrap/classes
+./jniwrap/libs
+./.gradle
+./.idea
+./wince
+./travis
+

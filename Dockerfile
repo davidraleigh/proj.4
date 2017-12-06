@@ -1,4 +1,5 @@
 FROM openjdk:8u141-jdk-slim as builder
+
 # Test and CI builder
 RUN apt update && \
     apt install -y git \
@@ -10,15 +11,16 @@ RUN apt update && \
     wget \
     ant
 
-WORKDIR /opt/src
+WORKDIR /opt/src/proj.4
 
-# TODO, replace github.com clone with ADD/COPY command and then add .dockerignore command to skip the removal of docs and .git
-RUN git clone --single-branch --depth 1 https://github.com/OSGeo/proj.4.git && \
-    rm -rf /opt/src/proj.4/docs && \
-    rm -rf /opt/src/proj.4/.git
+COPY ./ ./
+
+## TODO, replace github.com clone with ADD/COPY command and then add .dockerignore command to skip the removal of docs and .git
+#RUN git clone --single-branch --depth 1 https://github.com/OSGeo/proj.4.git && \
+#    rm -rf /opt/src/proj.4/docs && \
+#    rm -rf /opt/src/proj.4/.git
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
-WORKDIR /opt/src/proj.4
 
 # CC="ccache gcc" CFLAGS="-g -Wfloat-conversion -Wall -Wextra -Werror -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Werror=format-security -Wshadow -O2"
 RUN ./autogen.sh && \
@@ -78,4 +80,6 @@ COPY --from=builder /usr/local .
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
 ENV PROJ_LIB=/usr/local/share/proj
+
+RUN /sbin/ldconfig
 

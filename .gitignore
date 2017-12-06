@@ -124,3 +124,8 @@ test/unit/proj_errno_string_test.o
 jniwrap/out
 
 /docs/build
+/jniwrap/classes
+/jniwrap/libs
+.DS_Store
+.gradle
+.idea

@@ -11,7 +11,9 @@ RUN apt update && \
     ant
 
 WORKDIR /opt/src
-RUN git clone https://github.com/OSGeo/proj.4.git && \
+
+# TODO, replace github.com clone with ADD/COPY command and then add .dockerignore command to skip the removal of docs and .git
+RUN git clone --single-branch --depth 1 https://github.com/OSGeo/proj.4.git && \
     rm -rf /opt/src/proj.4/docs && \
     rm -rf /opt/src/proj.4/.git
 
@@ -66,7 +68,7 @@ WORKDIR /opt/src/proj.4/test/gigs
 RUN python3 test_json.py --test conversion 5101.1-jhs.json 5101.4-jhs-etmerc.json 5105.2.json 5106.json 5108.json 5110.json 5111.1.json
 RUN python3 test_json.py 5101.2-jhs.json 5101.3-jhs.json 5102.1.json 5103.1.json 5103.2.json 5103.3.json 5107.json 5109.json 5112.json 5113.json 5201.json 5208.json
 
-# Production build
+## Production build
 FROM openjdk:8u141-jdk-slim
 
 #WORKDIR /opt/src

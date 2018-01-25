@@ -1,0 +1,69 @@
+platform:
+- x64
+- x86
+
+environment:
+  matrix:
+
+# Does not work
+# VS 2008
+#  - BUILD_TYPE: cmake
+#    VS_VERSION: Visual Studio 9 2008
+
+# VS 2010
+  - BUILD_TYPE: cmake
+    VS_VERSION: Visual Studio 10
+
+# VS 2012
+  - BUILD_TYPE: cmake
+    VS_VERSION: Visual Studio 11
+
+# VS 2013
+  - BUILD_TYPE: cmake
+    VS_VERSION: Visual Studio 12
+
+  - BUILD_TYPE: nmake
+
+shallow_clone: true
+
+build_script:
+  - echo build_script
+  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x86" call "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat"
+  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x64" "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64
+  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x64" call "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat" x86_amd64
+  - if "%BUILD_TYPE%" == "nmake" nmake /f makefile.vc
+  - if "%BUILD_TYPE%" == "nmake" nmake /f makefile.vc install-all
+  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x64" cd src
+  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x64" nmake /f makefile.vc multistresstest.exe
+# Disabled for now as it scales badly
+#  - if "%BUILD_TYPE%" == "nmake" if "%platform%" == "x64" multistresstest.exe
+  - if "%BUILD_TYPE%" == "cmake" if "%platform%" == "x64" SET VS_FULL=%VS_VERSION% Win64
+  - if "%BUILD_TYPE%" == "cmake" if "%platform%" == "x86" SET VS_FULL=%VS_VERSION%
+  - if "%BUILD_TYPE%" == "cmake" echo "%VS_FULL%"
+# warning C4706: assignment within conditional expression
+  - if "%BUILD_TYPE%" == "cmake" cmake -G "%VS_FULL%" . -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=../bin -DBUILD_LIBPROJ_SHARED=ON -DCMAKE_C_FLAGS="/W4 /wd4706 /WX /D_CRT_SECURE_NO_WARNINGS"
+  - if "%BUILD_TYPE%" == "cmake" cmake --build . --config Release
+
+test_script:
+  - echo test_script
+  - if "%BUILD_TYPE%" == "cmake" set PROJ_LIB=C:\projects\proj-4\nad
+  - if "%BUILD_TYPE%" == "nmake" set PROJ_LIB=C:\PROJ\SHARE
+  - cd %PROJ_LIB%
+  - curl -O http://download.osgeo.org/proj/proj-datumgrid-1.6.zip
+  - curl -O http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx
+  - 7z e -aoa -y proj-datumgrid-1.6.zip
+  - dir
+  - cd ..
+  - dir
+  - cd bin
+  - echo "Contents of current directory:"
+  - dir
+  - gie.exe ..\test\gie\builtins.gie
+  - gie.exe ..\test\gie\more_builtins.gie
+  - gie.exe ..\test\gie\deformation.gie
+  - gie.exe ..\test\gie\axisswap.gie
+  - gie.exe ..\test\gie\ellipsoid.gie
+  - gie.exe ..\test\gie\GDA.gie
+
+deploy: off
+

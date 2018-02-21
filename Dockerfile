@@ -9,16 +9,12 @@ RUN apt update && \
     build-essential \
     make \
     wget \
-    ant
+    ant && \
+    rm -rf /var/lib/apt
 
 WORKDIR /opt/src/proj.4
 
 COPY ./ ./
-
-## TODO, replace github.com clone with ADD/COPY command and then add .dockerignore command to skip the removal of docs and .git
-#RUN git clone --single-branch --depth 1 https://github.com/OSGeo/proj.4.git && \
-#    rm -rf /opt/src/proj.4/docs && \
-#    rm -rf /opt/src/proj.4/.git
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
@@ -73,6 +69,8 @@ RUN python3 test_json.py 5101.2-jhs.json 5101.3-jhs.json 5102.1.json 5103.1.json
 ## Production build
 FROM openjdk:8u141-jdk-slim
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    rm -rf /var/lib/apt
 #WORKDIR /opt/src
 #COPY --from=builder /opt/src/proj.4 .
 WORKDIR /usr/local

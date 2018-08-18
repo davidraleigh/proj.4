@@ -1,4 +1,7 @@
-FROM openjdk:8u131-jdk-alpine as builder
+ARG JDK_TAG=8-jdk-alpine
+ARG JRE_TAG=${JDK_TAG}
+
+FROM openjdk:${JDK_TAG} as builder
 
 # ODO update horizontal datum support as described in travis scripts
 # Install Proj4
@@ -13,23 +16,10 @@ RUN apk update && \
     apk add build-base && \
     apk add make && \
     apk add wget && \
-    apk add apache-ant 
+    apk add apache-ant
 
 RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 
-# TODO vertical datum support
-#RUN mkdir /vdatum \
-#    && cd /vdatum \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2012.zip && unzip -j -u usa_geoid2012.zip -d /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2009.zip && unzip -j -u usa_geoid2009.zip -d /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2003.zip && unzip -j -u usa_geoid2003.zip -d /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid1999.zip && unzip -j -u usa_geoid1999.zip -d /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertconc.gtx && mv vertconc.gtx /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertcone.gtx && mv vertcone.gtx /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertconw.gtx && mv vertconw.gtx /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx && mv egm96_15.gtx /usr/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/egm08_25/egm08_25.gtx && mv egm08_25.gtx /usr/share/proj \
-#    && rm -rf /vdatum
 
 #TODO there should be a release checkout
 WORKDIR /opt/src/proj.4
@@ -44,15 +34,14 @@ RUN cd jniwrap \
     && mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
 
 WORKDIR /usr/local/share/proj
-RUN wget -qO- -O tmp.zip http://download.osgeo.org/proj/proj-datumgrid-1.6.zip && \
-    unzip -o tmp.zip && \
-    rm tmp.zip && \
-    wget http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx
+ARG FETCH_VERT=0
+ENV VERT_DATUM=$FETCH_VERT
+RUN /opt/src/proj.4/datum-installs.sh $FETCH_VERT
 
 ENV PROJ_LIB=/usr/local/share/proj
 WORKDIR /opt/src/proj.4
 
-FROM openjdk:8u131-jdk-alpine
+FROM openjdk:${JRE_TAG}
 
 RUN apk update
 

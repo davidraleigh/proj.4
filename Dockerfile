@@ -1,4 +1,4 @@
-ARG JDK_TAG=8u141-jdk-slim
+ARG JDK_TAG=8-jdk-slim
 ARG JRE_TAG=${JDK_TAG}
 
 FROM openjdk:${JDK_TAG} as builder

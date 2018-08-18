@@ -7,4 +7,15 @@
 ./.idea
 ./wince
 ./travis
+*.o
 
+/src/*.o
+/src/*.lo
+/src/*.la
+/src/proj.dll
+/src/*.lib
+/src/*.pdb
+/src/*.exp
+/src/*.opt
+/src/*.obj
+/src/*.exe

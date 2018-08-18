@@ -1,6 +1,9 @@
 ARG JDK_TAG=8u141-jdk-slim
 ARG JRE_TAG=${JDK_TAG}
+
 FROM openjdk:${JDK_TAG} as builder
+
+MAINTAINER David Raleigh <david@echoparklabs.io>
 
 # Test and CI builder
 RUN apt update && \
@@ -31,23 +34,9 @@ RUN ./autogen.sh && \
 
 # Horizontal datums to improve test results
 WORKDIR /usr/local/share/proj
-RUN wget -qO- -O tmp.zip http://download.osgeo.org/proj/proj-datumgrid-1.6.zip && \
-    unzip -o tmp.zip && \
-    rm tmp.zip && \
-    wget http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx
-
-# TODO vertical datum support
-#WORKDIR /vdatum
-#RUN wget http://download.osgeo.org/proj/vdatum/usa_geoid2012.zip && unzip -j -u usa_geoid2012.zip -d /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2009.zip && unzip -j -u usa_geoid2009.zip -d /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid2003.zip && unzip -j -u usa_geoid2003.zip -d /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/usa_geoid1999.zip && unzip -j -u usa_geoid1999.zip -d /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertconc.gtx && mv vertconc.gtx /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertcone.gtx && mv vertcone.gtx /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/vertcon/vertconw.gtx && mv vertconw.gtx /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/egm96_15/egm96_15.gtx && mv egm96_15.gtx /usr/local/share/proj \
-#    && wget http://download.osgeo.org/proj/vdatum/egm08_25/egm08_25.gtx && mv egm08_25.gtx /usr/local/share/proj \
-#    && rm -rf /vdatum
+ARG FETCH_VERT=0
+ENV VERT_DATUM=$FETCH_VERT
+RUN /opt/src/proj.4/datum-installs.sh $FETCH_VERT
 
 ENV PROJ_LIB=/usr/local/share/proj
 WORKDIR /opt/src/proj.4

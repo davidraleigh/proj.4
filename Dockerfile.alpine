@@ -27,13 +27,13 @@ RUN export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 WORKDIR /opt/src/proj.4
 
 COPY ./ ./
-RUN ./autogen.sh \
-    && CFLAGS=-I$JAVA_HOME/include/linux ./configure --with-jni=$JAVA_HOME/include --prefix=/usr/local \
-    && make -j 8 \
-    && make install
-    && cd jniwrap \
-    && ant \
-    && mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
+RUN ./autogen.sh && \
+    CFLAGS=-I$JAVA_HOME/include/linux ./configure --with-jni=$JAVA_HOME/include --prefix=/usr/local && \
+    make -j 8 && \
+    make install && \
+    cd jniwrap && \
+    ant && \
+    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
 
 WORKDIR /usr/local/share/proj
 ARG FETCH_VERT=0

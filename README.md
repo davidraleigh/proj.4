@@ -40,7 +40,8 @@ docker build --build-arg JDK_TAG=10-jdk-slim -t us.gcr.io/echoparklabs/proj.4:10
 ```
 To build the latest debian 10 jre:
 ```bash
-docker build --build-arg JDK_TAG=10-jdk-slim --build-arg JRE_TAG=10-jre-slim -t us.gcr.io/echoparklabs/proj.4:10-jdk-slim .
+docker build --build-arg JDK_TAG=10-jdk-slim --build-arg JRE_TAG=10-jre-slim \
+       -t us.gcr.io/echoparklabs/proj.4:10-jdk-slim .
 ```
 
 

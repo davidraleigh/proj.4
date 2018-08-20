@@ -3,6 +3,8 @@ ARG JRE_TAG=${JDK_TAG}
 
 FROM openjdk:${JDK_TAG} as builder
 
+MAINTAINER David Raleigh <david@echoparklabs.io>
+
 # ODO update horizontal datum support as described in travis scripts
 # Install Proj4
 # https://github.com/OSGeo/proj.4/blob/57a07c119ae08945caa92b29c4b427b57f1f728d/Dockerfile
@@ -29,7 +31,7 @@ RUN ./autogen.sh \
     && CFLAGS=-I$JAVA_HOME/include/linux ./configure --with-jni=$JAVA_HOME/include --prefix=/usr/local \
     && make -j 8 \
     && make install
-RUN cd jniwrap \
+    && cd jniwrap \
     && ant \
     && mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
 

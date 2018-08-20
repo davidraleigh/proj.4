@@ -26,7 +26,7 @@ cp ./jniwrap/libs/jproj.jar /usr/local/lib/
 The Docker images are based off of the [openjdk](https://hub.docker.com/_/openjdk/) images. You can build a jdk image or a jre image, you can use Java 8 or 10 (maybe 11, haven't tested), and you can use debian or alpine.
 
 ### Building Alpine
-At this time, the resulting Alpine docker image is about 50% smaller than the slim debian images.
+At this time, the resulting Alpine docker image is about 50% smaller than the slim debian images. The default Alpine image uses the `8-jdk-apline` image
 
 To build the latest Alpine JDK 8 image:
 ```bash
@@ -36,20 +36,20 @@ docker build -t us.gcr.io/echoparklabs/proj.4:8-jdk-alpine -f Dockerfile.alpine 
 To build a specific Alpine JDK 8 image use the `--build-arg`. For example if you wanted to build off of the `8u171-jdk-alpine3.8` openjdk image:
 ```bash
 docker build --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t us.gcr.io/echoparklabs/proj.4:8-jdk-alpine -f Dockerfile.alpine .
+       -t us.gcr.io/echoparklabs/proj.4:8u171-jdk-alpine3.8 -f Dockerfile.alpine .
 ```
 
 To build the latest Alpine JRE image use the jre tag with a `--build-arg` (it will default to the latest JDK 8 alpine image):
 ```bash
 docker build --build-arg JRE_TAG=8-jre-alpine \
-       -t us.gcr.io/echoparklabs/proj.4:8-jdk-alpine -f Dockerfile.alpine .
+       -t us.gcr.io/echoparklabs/proj.4:8-jre-alpine -f Dockerfile.alpine .
 ```
 
 And to build a specific jre image use the following `--build-args`. For example if you wanted to the `8u171-jre-alpine3.8`  you would need to also specifiy `8u171-jdk-alpine3.8` JDK:
 ```bash
 docker build --build-arg JRE_TAG=8u171-jre-alpine3.8 \
        --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t us.gcr.io/echoparklabs/proj.4:8-jdk-alpine -f Dockerfile.alpine .
+       -t us.gcr.io/echoparklabs/proj.4:8u171-jre-alpine3.8 -f Dockerfile.alpine .
 ```
 
 

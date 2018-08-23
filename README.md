@@ -1,7 +1,13 @@
-# Building Proj4 with JNI
+# Proj4 with JNI
 The most recent version of [OSGeo/proj.4](https://github.com/OSGeo/proj.4) may work better, but last time I tried to build it I couldn't get JNI to work properly with my Docker files.
 
-## Mac
+## Pull the Docker image
+Pull the docker image with the [tag](https://hub.docker.com/r/echoparklabs/proj.4/tags/) appropriate to your Java environment. In this case I'm pulling the JDK Alpine image
+```bash
+docker pull echoparklabs/proj.4:8-jdk-alpine
+```
+
+## Building for Mac
 After cloning the repo locally, you'll need to install some build tools. These can be installed with homebrew (I can't remember if `mozjpeg` is necessary, someone please try building without it and let me know):
 ```bash
 brew reinstall libtool
@@ -22,7 +28,7 @@ ant
 cp ./jniwrap/libs/jproj.jar /usr/local/lib/
 ```
 
-## Docker
+## Building your own Docker Image
 The Docker images are based off of the [openjdk](https://hub.docker.com/_/openjdk/) images. You can build a jdk image or a jre image, you can use Java 8 or 10 (maybe 11, haven't tested), and you can use debian or alpine.
 
 ### Building Debian
@@ -60,7 +66,7 @@ docker build --build-arg JRE_TAG=8-jre-alpine \
 ```
 
 
-### Building with specific jdk docker images:
+### Building with specific Debian JDK or JRE docker images:
 
 To build a specific Alpine JDK 8 image use the `--build-arg`. For example if you wanted to build off of the `8u171-jdk-alpine3.8` openjdk image:
 ```bash

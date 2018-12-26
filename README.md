@@ -20,12 +20,13 @@ brew install ant
 Change directories into the proj.4 directory and execute the following to build proj.4 and copy the proj.4 jar into `/usr/local/lib`:
 ```bash
 export JAVA_HOME="$(/usr/libexec/java_home)"
+autoreconf -i
 CFLAGS=-I$JAVA_HOME/include/darwin ./configure --with-jni=$JAVA_HOME/include
 make
 make install
 cd jniwrap
 ant
-cp ./jniwrap/libs/jproj.jar /usr/local/lib/
+cp ./libs/jproj.jar /usr/local/lib/
 ```
 
 ## Building your own Docker Image

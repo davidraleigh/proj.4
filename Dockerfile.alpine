@@ -33,7 +33,7 @@ RUN ./autogen.sh && \
     make install && \
     cd jniwrap && \
     ant && \
-    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
+    mv /opt/src/proj.4/jniwrap/out/proj.jar /usr/local/lib/
 
 WORKDIR /usr/local/share/proj
 ARG FETCH_VERT=0

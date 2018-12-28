@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(urmfps, "Urmaev Flat-Polar Sinusoidal") "\n\tPCyl, Sph.\n\tn=";
@@ -69,4 +72,3 @@ PJ *PROJECTION(wag1) {
     P->opaque->n = 0.8660254037844386467637231707;
     return setup(P);
 }
-

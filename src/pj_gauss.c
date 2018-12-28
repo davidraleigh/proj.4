@@ -24,7 +24,11 @@
 ** SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #define PJ_LIB__
-#include <projects.h>
+
+#include <math.h>
+#include <stdlib.h>
+
+#include "projects.h"
 
 #define MAX_ITER 20
 
@@ -36,8 +40,8 @@ struct GAUSS {
 };
 #define DEL_TOL 1e-14
 
-static double srat(double esinp, double exp) {
-    return(pow((1.-esinp)/(1.+esinp), exp));
+static double srat(double esinp, double ratexp) {
+    return(pow((1.-esinp)/(1.+esinp), ratexp));
 }
 
 void *pj_gauss_ini(double e, double phi0, double *chi, double *rc) {
@@ -65,7 +69,7 @@ void *pj_gauss_ini(double e, double phi0, double *chi, double *rc) {
 }
 
 LP pj_gauss(projCtx ctx, LP elp, const void *data) {
-    struct GAUSS *en = (struct GAUSS *)data;
+    const struct GAUSS *en = (const struct GAUSS *)data;
     LP slp;
     (void) ctx;
 
@@ -77,7 +81,7 @@ LP pj_gauss(projCtx ctx, LP elp, const void *data) {
 }
 
 LP pj_inv_gauss(projCtx ctx, LP slp, const void *data) {
-    struct GAUSS *en = (struct GAUSS *)data;
+    const struct GAUSS *en = (const struct GAUSS *)data;
     LP elp;
     double num;
     int i;
@@ -92,6 +96,6 @@ LP pj_inv_gauss(projCtx ctx, LP slp, const void *data) {
     }
     /* convergence failed */
     if (!i)
-        pj_ctx_set_errno( ctx, -17 );
+        pj_ctx_set_errno(ctx, PJD_ERR_NON_CONV_INV_MERI_DIST);
     return (elp);
 }

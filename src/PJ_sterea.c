@@ -25,7 +25,8 @@
 */
 #define PJ_LIB__
 #include <errno.h>
-#include <projects.h>
+#include "projects.h"
+#include "proj_math.h"
 
 
 struct pj_opaque {
@@ -37,8 +38,6 @@ struct pj_opaque {
 
 
 PROJ_HEAD(sterea, "Oblique Stereographic Alternative") "\n\tAzimuthal, Sph&Ell";
-# define DEL_TOL    1.e-14
-# define MAX_ITER   10
 
 
 

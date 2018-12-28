@@ -1,6 +1,6 @@
 #################################################################################
 #
-# This file is part of CMake configuration for PROJ4 library (inspired from SOCI
+# This file is part of CMake configuration for PROJ library (inspired from SOCI
 # CMake,  Copyright (C) 2009-2010 Mateusz Loskot <mateusz@loskot.net> )
 #
 # Copyright (C) 2011 Nicolas David <nicolas.david@ign.fr>
@@ -11,32 +11,50 @@
 #################################################################################
 cmake_minimum_required(VERSION 2.6.0 FATAL_ERROR)
 
-# proj4 is an ANSI C project
-project(PROJ4 C)
+# For historic reasons, the CMake PROJECT-NAME is PROJ4
+project(PROJ4 LANGUAGES C CXX)
 set(PROJECT_INTERN_NAME PROJ)
+
+if (NOT CMAKE_VERSION VERSION_LESS 3.1)
+  cmake_policy(SET CMP0054 NEW)
+endif ()
 
 # Set warnings
 if("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
-  set(CMAKE_C_FLAGS "/WX ${CMAKE_C_FLAGS}")
+  # Suppress warning 4706 about assignment within conditional expression
+  # Suppress warning 4996 about sprintf, etc., being unsafe
+  # Suppress warning 4589 about Constructor of abstract class...ignores initializer for virtual base class (see https://github.com/weidai11/cryptopp/issues/214#issuecomment-230283061)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /wd4706 /wd4996 /D_CRT_SECURE_NO_WARNINGS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /W4 /wd4706 /wd4996 /wd4589 /D_CRT_SECURE_NO_WARNINGS")
 elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
-  set(CMAKE_C_FLAGS "-std=c89 -Wall -Wextra -Wswitch -Werror \
-    -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat \
-    -Werror=format-security -Wshadow ${CMAKE_C_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wswitch -Wshadow -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Wformat-security")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wswitch -Wshadow -Wunused-parameter -Wmissing-declarations -Wformat -Wformat-security")
 elseif("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-  set(CMAKE_C_FLAGS "-std=c89 -Wall -Wextra -Wswitch -Werror \
-    -Wc99-extensions -Wc11-extensions -Wunused-parameter -Wmissing-prototypes \
-    -Wmissing-declarations -Wformat -Werror=format-security -Wshadow \
-    -Wfloat-conversion ${CMAKE_C_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wswitch -Wshadow -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Wformat-security -Wfloat-conversion -Wc99-extensions -Wc11-extensions")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wswitch -Wshadow -Wunused-parameter -Wmissing-declarations -Wformat -Wformat-security -Wfloat-conversion")
 endif()
 
+# Tell Intel compiler to do arithmetic accurately.  This is needed to
+# stop the compiler from ignoring parentheses in expressions like
+# (a + b) + c and from simplifying 0.0 + x to x (which is wrong if
+# x = -0.0).
+if (CMAKE_C_COMPILER_ID STREQUAL "Intel")
+  if (MSVC)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /fp:precise")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qstd=c++11")
+  else ()
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  endif ()
+endif ()
+
 #################################################################################
-# PROJ4 CMake modules
+# PROJ CMake modules
 #################################################################################
 # Path to additional CMake modules
 set(CMAKE_MODULE_PATH ${PROJ4_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
-set(CMAKE_MODULE_PATH ${PROJ4_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
 
-include(Proj4Utilities)
+include(ProjUtilities)
 
 message(STATUS "")
 colormsg(_HIBLUE_ "Configuring PROJ:")
@@ -44,17 +62,17 @@ colormsg(_HIBLUE_ "Configuring PROJ:")
 #################################################################################
 #PROJ version information
 #################################################################################
-include(Proj4Version)
-proj_version(MAJOR 4 MINOR 9 PATCH 3)
-set(PROJ_API_VERSION "12")
-set(PROJ_BUILD_VERSION "12.0.0")
+include(ProjVersion)
+proj_version(MAJOR 5 MINOR 2 PATCH 0)
+set(PROJ_API_VERSION "14")
+set(PROJ_BUILD_VERSION "14.0.2")
 
 #################################################################################
 # Build features and variants
 #################################################################################
-include(Proj4SystemInfo)
-include(Proj4Config)
-include(Proj4Mac)
+include(ProjSystemInfo)
+include(ProjConfig)
+include(ProjMac)
 include(policies)
 
 #################################################################################
@@ -84,7 +102,9 @@ int main() {
   int q;
   return (int)(hypot(3.0, 4.0) + atanh(0.8) + cbrt(8.0) +
                remquo(100.0, 90.0, &q) +
-               remainder(100.0, 90.0) + copysign(1.0, -0.0));
+               remainder(100.0, 90.0) + copysign(1.0, -0.0) +
+               log1p(0.1) + asinh(0.1)) +
+               isnan(0.0);
 }\n" C99_MATH)
 if (C99_MATH)
   add_definitions (-DHAVE_C99_MATH=1)
@@ -107,13 +127,12 @@ if (MSVC OR CMAKE_CONFIGURATION_TYPES)
   set (CMAKE_DEBUG_POSTFIX _d)
 endif ()
 
-option(PROJ4_TESTS "Enable build of collection of PROJ4 tests" ON)
-boost_report_value(PROJ4_TESTS)
-if(PROJ4_TESTS)
-    include(CTest)
+option(PROJ_TESTS "Enable build of collection of PROJ tests" ON)
+boost_report_value(PROJ_TESTS)
+if(PROJ_TESTS)
     enable_testing()
-endif(PROJ4_TESTS)
-include(Proj4Test)
+endif(PROJ_TESTS)
+include(ProjTest)
 
 # Put the libraries and binaries that get built into directories at the
 # top of the build tree rather than in hard-to-find leaf
@@ -127,7 +146,7 @@ link_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 #################################################################################
 # Installation
 #################################################################################
-include(Proj4InstallPath)
+include(ProjInstallPath)
 set(BINDIR "${DEFAULT_BINDIR}" CACHE PATH "The directory to install binaries into.")
 set(LIBDIR "${DEFAULT_LIBDIR}" CACHE PATH "The directory to install libraries into.")
 set(DATADIR "${DEFAULT_DATADIR}" CACHE PATH "The directory to install data files into.")
@@ -145,4 +164,5 @@ add_subdirectory(nad)
 add_subdirectory(src)
 add_subdirectory(man)
 add_subdirectory(cmake)
+add_subdirectory(test)
 

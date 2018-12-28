@@ -27,9 +27,12 @@
 
 #define PJ_LIB__
 
-#include <projects.h>
-#include <string.h>
 #include <assert.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "projects.h"
 
 static PJ_GridCatalog *grid_catalog_list = NULL;
 
@@ -139,8 +142,8 @@ int pj_gc_apply_gridshift( PJ *defn, int inverse,
                                 &(defn->last_after_date));
             if( defn->last_after_grid == NULL )
             {
-                pj_ctx_set_errno( defn->ctx, -38 );
-                return -38;
+                pj_ctx_set_errno( defn->ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
+                return PJD_ERR_FAILED_TO_LOAD_GRID;
             }
         }
         gi = defn->last_after_grid;
@@ -149,8 +152,8 @@ int pj_gc_apply_gridshift( PJ *defn, int inverse,
         /* load the grid shift info if we don't have it. */
         if( gi->ct->cvs == NULL && !pj_gridinfo_load( defn->ctx, gi ) )
         {
-            pj_ctx_set_errno( defn->ctx, -38 );
-            return -38;
+            pj_ctx_set_errno( defn->ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
+            return PJD_ERR_FAILED_TO_LOAD_GRID;
         }
             
         output_after = nad_cvt( input, inverse, gi->ct );
@@ -187,8 +190,8 @@ int pj_gc_apply_gridshift( PJ *defn, int inverse,
                                 &(defn->last_before_date));
             if( defn->last_before_grid == NULL )
             {
-                pj_ctx_set_errno( defn->ctx, -38 );
-                return -38;
+                pj_ctx_set_errno( defn->ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
+                return PJD_ERR_FAILED_TO_LOAD_GRID;
             }
         }
 
@@ -198,8 +201,8 @@ int pj_gc_apply_gridshift( PJ *defn, int inverse,
         /* load the grid shift info if we don't have it. */
         if( gi->ct->cvs == NULL && !pj_gridinfo_load( defn->ctx, gi ) )
         {
-            pj_ctx_set_errno( defn->ctx, -38 );
-            return -38;
+            pj_ctx_set_errno( defn->ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
+            return PJD_ERR_FAILED_TO_LOAD_GRID;
         }
             
         output_before = nad_cvt( input, inverse, gi->ct );
@@ -234,7 +237,7 @@ int pj_gc_apply_gridshift( PJ *defn, int inverse,
 
 PJ_GRIDINFO *pj_gc_findgrid( projCtx ctx, PJ_GridCatalog *catalog, int after,
                              LP location, double date,
-                             PJ_Region *optimal_region,
+                             PJ_Region *optional_region,
                              double *grid_date ) 
 {
     int iEntry;
@@ -260,19 +263,19 @@ PJ_GRIDINFO *pj_gc_findgrid( projCtx ctx, PJ_GridCatalog *catalog, int after,
         break;
     }
 
-    if( iEntry == catalog->entry_count )
+    if( entry == NULL )
     {
         if( grid_date )
             *grid_date = 0.0;
-        if( optimal_region != NULL )
-            memset( optimal_region, 0, sizeof(PJ_Region));
+        if( optional_region != NULL )
+            memset( optional_region, 0, sizeof(PJ_Region));
         return NULL;
     }
 
     if( grid_date )
         *grid_date = entry->date;
 
-    if( optimal_region )
+    if( optional_region )
     {
         
     }

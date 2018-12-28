@@ -4,4 +4,4 @@ set -e
 
 export CCACHE_CPP2=yes
 
-CC="ccache clang" CFLAGS="-g -Wall -Wextra -Werror -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Werror=format-security -Wshadow -Wfloat-conversion -fsanitize=address -O2" ./travis/install.sh
+CC="ccache clang" CXX="ccache clang++" CFLAGS="-std=c89 -Werror -fsanitize=address" CXXFLAGS="-Werror -fsanitize=address" LDFLAGS="-fsanitize=address" ./travis/install.sh

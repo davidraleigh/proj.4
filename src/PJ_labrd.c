@@ -1,13 +1,15 @@
 #define PJ_LIB__
+
 #include <errno.h>
+#include <math.h>
+
 #include "projects.h"
 
 PROJ_HEAD(labrd, "Laborde") "\n\tCyl, Sph\n\tSpecial for Madagascar";
 #define EPS 1.e-10
 
 struct pj_opaque {
-    double  kRg, p0s, A, C, Ca, Cb, Cc, Cd; \
-    int     rot;
+    double  kRg, p0s, A, C, Ca, Cb, Cc, Cd;
 };
 
 
@@ -103,7 +105,6 @@ PJ *PROJECTION(labrd) {
         return pj_default_destructor (P, ENOMEM);
     P->opaque = Q;
 
-    Q->rot  = pj_param(P->ctx, P->params, "bno_rot").i == 0;
     Az = pj_param(P->ctx, P->params, "razi").f;
     sinp = sin(P->phi0);
     t = 1. - P->es * sinp * sinp;
@@ -127,4 +128,3 @@ PJ *PROJECTION(labrd) {
 
     return P;
 }
-

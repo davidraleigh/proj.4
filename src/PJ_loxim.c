@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(loxim, "Loximuthal") "\n\tPCyl Sph";
@@ -70,4 +73,3 @@ PJ *PROJECTION(loxim) {
 
    return P;
 }
-

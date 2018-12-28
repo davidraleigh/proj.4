@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(fouc_s, "Foucaut Sinusoidal") "\n\tPCyl., Sph.";
@@ -65,5 +68,3 @@ PJ *PROJECTION(fouc_s) {
     P->fwd = s_forward;
     return P;
 }
-
-

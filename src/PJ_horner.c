@@ -76,13 +76,17 @@
  *****************************************************************************/
 
 #define PJ_LIB__
+
+#include <errno.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "proj_internal.h"
 #include "projects.h"
-#include <stddef.h>
-#include <math.h>
-#include <errno.h>
 
-PROJ_HEAD(horner,    "Horner polynomial evaluation");
+PROJ_HEAD(horner, "Horner polynomial evaluation");
 
 /* make horner.h interface with proj's memory management */
 #define horner_dealloc(x) pj_dealloc(x)
@@ -96,6 +100,8 @@ static HORNER *horner_alloc (size_t order, int complex_polynomia);
 static void    horner_free (HORNER *h);
 
 struct horner {
+    int    uneg;     /* u axis negated? */
+    int    vneg;     /* v axis negated? */
     int    order;    /* maximum degree of polynomium */
     int    coefs;    /* number of coefficients for each polynomium  */
     double range;    /* radius of the region of validity */
@@ -264,8 +270,12 @@ summing the tiny high order elements first.
         double u, v, N, E;
 
         /* Double Horner's scheme: N = n*Cy*e -> yout, E = e*Cx*n -> xout */
-        for (N = *--tcy,  E = *--tcx;    r > 0;    r--) {
-            for (c = g,  u = *--tcy,  v = *--tcx;    c >= r;    c--) {
+        N = *--tcy;
+        E = *--tcx;
+        for (;    r > 0;    r--) {
+            u = *--tcy;
+            v = *--tcx;
+            for (c = g;    c >= r;    c--) {
                 u = n*u + *--tcy;
                 v = e*v + *--tcx;
             }
@@ -340,11 +350,19 @@ polynomial evaluation engine.
         c  =  cb + sz;
         e  =  position.u - transformation->fwd_origin->u;
         n  =  position.v - transformation->fwd_origin->v;
+        if (transformation->uneg)
+            e  =  -e;
+        if (transformation->vneg)
+            n  =  -n;
     } else {                                              /* inverse */
         cb =  transformation->inv_c;
         c  =  cb + sz;
         e  =  position.u - transformation->inv_origin->u;
         n  =  position.v - transformation->inv_origin->v;
+        if (transformation->uneg)
+            e  =  -e;
+        if (transformation->vneg)
+            n  =  -n;
     }
 
     if ((fabs(n) > range) || (fabs(e) > range)) {
@@ -426,7 +444,7 @@ static int parse_coefs (PJ *P, double *coefs, char *param, int ncoefs) {
 /*********************************************************************/
 PJ *PROJECTION(horner) {
 /*********************************************************************/
-    int   degree = 0, n, complex_horner = 0;
+    int   degree = 0, n, complex_polynomia = 0;
     HORNER *Q;
     P->fwd4d  = horner_forward_4d;
     P->inv4d  = horner_reverse_4d;
@@ -434,26 +452,35 @@ PJ *PROJECTION(horner) {
     P->inv3d  =  0;
     P->fwd    =  0;
     P->inv    =  0;
-    P->left   =  P->right  =  PJ_IO_UNITS_METERS;
+    P->left   =  P->right  =  PJ_IO_UNITS_PROJECTED;
     P->destructor = horner_freeup;
 
     /* Polynomial degree specified? */
-    if (pj_param (P->ctx, P->params, "tdeg").i) /* degree specified? */
-		degree = pj_param(P->ctx, P->params, "ideg").i;
-    else {
+    if (pj_param (P->ctx, P->params, "tdeg").i) { /* degree specified? */
+        degree = pj_param(P->ctx, P->params, "ideg").i;
+        if (degree < 0 || degree > 10000) {
+            /* What are reasonable minimum and maximums for degree? */
+            proj_log_debug (P, "Horner: Degree is unreasonable: %d", degree);
+            return horner_freeup (P, PJD_ERR_INVALID_ARG);
+        }
+    } else {
         proj_log_debug (P, "Horner: Must specify polynomial degree, (+deg=n)");
         return horner_freeup (P, PJD_ERR_MISSING_ARGS);
     }
 
     if (pj_param (P->ctx, P->params, "tfwd_c").i || pj_param (P->ctx, P->params, "tinv_c").i) /* complex polynomium? */
-		complex_horner = 1;
+		complex_polynomia = 1;
 
-    Q = horner_alloc (degree, complex_horner);
+    Q = horner_alloc (degree, complex_polynomia);
     if (Q == 0)
         return horner_freeup (P, ENOMEM);
     P->opaque = (void *) Q;
 
-    if (complex_horner) {
+    if (complex_polynomia) {
+        /* Westings and/or southings? */
+        Q->uneg = pj_param_exists (P->params, "uneg") ? 1 : 0;
+        Q->vneg = pj_param_exists (P->params, "vneg") ? 1 : 0;
+
         n = 2*degree + 2;
         if (0==parse_coefs (P, Q->fwd_c, "fwd_c", n))
             return horner_freeup (P, PJD_ERR_MISSING_ARGS);
@@ -461,8 +488,8 @@ PJ *PROJECTION(horner) {
             return horner_freeup (P, PJD_ERR_MISSING_ARGS);
         P->fwd4d = complex_horner_forward_4d;
         P->inv4d = complex_horner_reverse_4d;
-
     }
+
     else {
         n = horner_number_of_coefficients (degree);
         if (0==parse_coefs (P, Q->fwd_u, "fwd_u", n))
@@ -484,4 +511,3 @@ PJ *PROJECTION(horner) {
 
     return P;
 }
-

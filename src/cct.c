@@ -24,7 +24,7 @@ professor of Geodesy at the University of Copenhagen, mentor and advisor
 for a generation of Danish geodesists, colleague and collaborator for
 two generations of global geodesists, Secretary General for the
 International Association of Geodesy, IAG (1995--2007), fellow of the
-Amercan Geophysical Union (1991), recipient of the IAG Levallois Medal
+American Geophysical Union (1991), recipient of the IAG Levallois Medal
 (2007), the European Geosciences Union Vening Meinesz Medal (2008), and
 of numerous other honours.
 
@@ -34,7 +34,7 @@ the development of geodesy - both through his scientific contributions,
 comprising more than 250 publications, and by his mentoring and teaching
 of the next generations of geodesists.
 
-As Christian was an avid Fortran programmer, and a keen Unix connoiseur,
+As Christian was an avid Fortran programmer, and a keen Unix connoisseur,
 he would have enjoyed to know that his initials would be used to name a
 modest Unix style transformation filter, hinting at the tireless aspect
 of his personality, which was certainly one of the reasons he accomplished
@@ -71,23 +71,26 @@ Thomas Knudsen, thokn@sdfe.dk, 2016-05-25/2017-10-26
 
 ***********************************************************************/
 
-#include "optargpm.h"
-#include "proj_internal.h"
-#include <proj.h>
-#include "projects.h"
+#include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-#include <math.h>
+#include <stdarg.h>
+
+#include "proj.h"
+#include "proj_internal.h"
+#include "proj_strtod.h"
+#include "projects.h"
+#include "optargpm.h"
 
 
-double proj_strtod(const char *str, char **endptr);
-double proj_atof(const char *str);
+static void logger(void *data, int level, const char *msg);
+static void print(PJ_LOG_LEVEL log_level, const char *fmt, ...);
 
+/* Prototypes from functions in this file */
 char *column (char *buf, int n);
 PJ_COORD parse_input_line (char *buf, int *columns, double fixed_height, double fixed_time);
-
 
 
 static const char usage[] = {
@@ -96,12 +99,14 @@ static const char usage[] = {
     "--------------------------------------------------------------------------------\n"
     "Options:\n"
     "--------------------------------------------------------------------------------\n"
-    "    -o /path/to/file  Specify output file name\n"
     "    -c x,y,z,t        Specify input columns for (up to) 4 input parameters.\n"
     "                      Defaults to 1,2,3,4\n"
-    "    -z value          Provide a fixed z value for all input data (e.g. -z 0)\n"
-    "    -t value          Provide a fixed t value for all input data (e.g. -t 0)\n"
+    "    -d n              Specify number of decimals in output.\n"
     "    -I                Do the inverse transformation\n"
+    "    -o /path/to/file  Specify output file name\n"
+    "    -t value          Provide a fixed t value for all input data (e.g. -t 0)\n"
+    "    -z value          Provide a fixed z value for all input data (e.g. -z 0)\n"
+    "    -s n              Skip n first lines of a infile\n"
     "    -v                Verbose: Provide non-essential informational output.\n"
     "                      Repeat -v for more verbosity (e.g. -vv)\n"
     "--------------------------------------------------------------------------------\n"
@@ -109,11 +114,14 @@ static const char usage[] = {
     "--------------------------------------------------------------------------------\n"
     "    --output          Alias for -o\n"
     "    --columns         Alias for -c\n"
+    "    --decimals        Alias for -d\n"
     "    --height          Alias for -z\n"
     "    --time            Alias for -t\n"
     "    --verbose         Alias for -v\n"
     "    --inverse         Alias for -I\n"
+    "    --skip-lines      Alias for -s\n"
     "    --help            Alias for -h\n"
+    "    --version         Print version number\n"
     "--------------------------------------------------------------------------------\n"
     "Operator Specs:\n"
     "--------------------------------------------------------------------------------\n"
@@ -145,42 +153,110 @@ static const char usage[] = {
     "--------------------------------------------------------------------------------\n"
 };
 
+
+static void logger(void *data, int level, const char *msg) {
+    FILE *stream;
+    int log_tell = proj_log_level(PJ_DEFAULT_CTX, PJ_LOG_TELL);
+
+    stream  = (FILE *) data;
+
+    /* if we use PJ_LOG_NONE we always want to print stuff to stream */
+    if (level == PJ_LOG_NONE) {
+        fprintf(stream, "%s", msg);
+        return;
+    }
+
+    /* should always print to stderr if level == PJ_LOG_ERROR */
+    if (level == PJ_LOG_ERROR) {
+        fprintf(stderr, "%s", msg);
+        return;
+    }
+
+    /* otherwise only print if log level set by user is high enough */
+    if (level <= log_tell)
+        fprintf(stream, "%s", msg);
+}
+
+FILE *fout;
+
+static void print(PJ_LOG_LEVEL log_level, const char *fmt, ...) {
+
+    va_list args;
+    char *msg_buf;
+
+    va_start( args, fmt );
+
+    msg_buf = (char *) malloc(100000);
+    if( msg_buf == NULL ) {
+        va_end( args );
+        return;
+    }
+
+    vsprintf( msg_buf, fmt, args );
+
+    logger((void *) fout, log_level, msg_buf);
+
+    va_end( args );
+    free( msg_buf );
+}
+
+
 int main(int argc, char **argv) {
     PJ *P;
     PJ_COORD point;
+    PJ_PROJ_INFO info;
     OPTARGS *o;
-    FILE *fout = stdout;
+    char blank_comment[] = "";
+    char whitespace[] = " ";
+    char *comment;
+    char *comment_delimiter;
     char *buf;
-    int nfields = 4, direction = 1, verbose;
+    int i, nfields = 4, direction = 1, skip_lines = 0, verbose;
     double fixed_z = HUGE_VAL, fixed_time = HUGE_VAL;
+    int decimals_angles = 10;
+    int decimals_distances = 4;
     int columns_xyzt[] = {1, 2, 3, 4};
-    const char *longflags[]  = {"v=verbose", "h=help", "I=inverse", 0};
-    const char *longkeys[]   = {"o=output",  "c=columns", "z=height", "t=time", 0};
+    const char *longflags[]  = {"v=verbose", "h=help", "I=inverse", "version", 0};
+    const char *longkeys[]   = {
+        "o=output",
+        "c=columns",
+        "d=decimals",
+        "z=height",
+        "t=time",
+        "s=skip-lines",
+        0};
 
-    o = opt_parse (argc, argv, "hvI", "cozt", longflags, longkeys);
+    fout = stdout;
+
+    o = opt_parse (argc, argv, "hvI", "cdozts", longflags, longkeys);
     if (0==o)
         return 0;
 
-    if (opt_given (o, "h")) {
+    if (opt_given (o, "h") || argc==1) {
         printf (usage, o->progname);
         return 0;
     }
 
-
     direction = opt_given (o, "I")? -1: 1;
-    verbose   = opt_given (o, "v");
+
+    verbose   = MIN(opt_given (o, "v"), 3); /* log level can't be larger than 3 */
+    proj_log_level (PJ_DEFAULT_CTX, verbose);
+    proj_log_func  (PJ_DEFAULT_CTX, (void *) fout, logger);
+
+    if (opt_given (o, "version")) {
+        print (PJ_LOG_NONE, "%s: %s\n", o->progname, pj_get_release ());
+        return 0;
+    }
 
     if (opt_given (o, "o"))
         fout = fopen (opt_arg (o, "output"), "wt");
     if (0==fout) {
-        fprintf (stderr, "%s: Cannot open '%s' for output\n", o->progname, opt_arg (o, "output"));
+        print (PJ_LOG_ERROR, "%s: Cannot open '%s' for output\n", o->progname, opt_arg (o, "output"));
         free (o);
         return 1;
     }
-    if (verbose > 3)
-        fprintf (fout, "%s: Running in very verbose mode\n", o->progname);
 
-
+    print (PJ_LOG_TRACE, "%s: Running in very verbose mode\n", o->progname);
 
     if (opt_given (o, "z")) {
         fixed_z = proj_atof (opt_arg (o, "z"));
@@ -192,10 +268,26 @@ int main(int argc, char **argv) {
         nfields--;
     }
 
+     if (opt_given (o, "d")) {
+        int dec = atoi (opt_arg (o, "d"));
+        decimals_angles = dec;
+        decimals_distances = dec;
+    }
+
+    if (opt_given (o, "s")) {
+        skip_lines = atoi (opt_arg(o, "s"));
+    }
+
     if (opt_given (o, "c")) {
-        int ncols = sscanf (opt_arg (o, "c"), "%d,%d,%d,%d", columns_xyzt, columns_xyzt+1, columns_xyzt+3, columns_xyzt+3);
+        int ncols;
+        /* reset colum numbers to ease comment output later on */
+        for (i=0; i<4; i++)
+            columns_xyzt[i] = 0;
+
+        /* cppcheck-suppress invalidscanf */
+        ncols = sscanf (opt_arg (o, "c"), "%d,%d,%d,%d", columns_xyzt, columns_xyzt+1, columns_xyzt+2, columns_xyzt+3);
         if (ncols != nfields) {
-            fprintf (stderr, "%s: Too few input columns given: '%s'\n", o->progname, opt_arg (o, "c"));
+            print (PJ_LOG_ERROR, "%s: Too few input columns given: '%s'\n", o->progname, opt_arg (o, "c"));
             free (o);
             if (stdout != fout)
                 fclose (fout);
@@ -206,7 +298,7 @@ int main(int argc, char **argv) {
     /* Setup transformation */
     P = proj_create_argv (0, o->pargc, o->pargv);
     if ((0==P) || (0==o->pargc)) {
-        fprintf (stderr, "%s: Bad transformation arguments - (%s)\n    '%s -h' for help\n",
+        print (PJ_LOG_ERROR, "%s: Bad transformation arguments - (%s)\n    '%s -h' for help\n",
                  o->progname, pj_strerrno (proj_errno(P)), o->progname);
         free (o);
         if (stdout != fout)
@@ -214,15 +306,26 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /* We have no API call for inverting an operation, so we brute force it. */
-    if (direction==-1)
+    info = proj_pj_info (P);
+    print (PJ_LOG_TRACE, "Final: %s argc=%d pargc=%d\n", info.definition, argc, o->pargc);
+
+    if (direction==-1) {
+        /* fail if an inverse operation is not available */
+        if (!info.has_inverse) {
+            print (PJ_LOG_ERROR, "Inverse operation not available\n");
+            if (stdout != fout)
+                fclose (fout);
+            return 1;
+        }
+        /* We have no API call for inverting an operation, so we brute force it. */
         P->inverted = !(P->inverted);
+    }
     direction = 1;
 
     /* Allocate input buffer */
     buf = calloc (1, 10000);
     if (0==buf) {
-        fprintf (stderr, "%s: Out of memory\n", o->progname);
+        print (PJ_LOG_ERROR, "%s: Out of memory\n", o->progname);
         pj_free (P);
         free (o);
         if (stdout != fout)
@@ -235,25 +338,28 @@ int main(int argc, char **argv) {
     while (opt_input_loop (o, optargs_file_format_text)) {
         int err;
         void *ret = fgets (buf, 10000, o->input);
+        char *c = column (buf, 1);
         opt_eof_handler (o);
         if (0==ret) {
-            fprintf (stderr, "Read error in record %d\n", (int) o->record_index);
+            print (PJ_LOG_ERROR, "Read error in record %d\n", (int) o->record_index);
             continue;
         }
         point = parse_input_line (buf, columns_xyzt, fixed_z, fixed_time);
+        if (skip_lines > 0) {
+            skip_lines--;
+            continue;
+        }
+
+        /* if it's a comment or blank line, we reflect it */
+        if (c && ((*c=='\0') || (*c=='#'))) {
+            fprintf (fout, "%s", buf);
+            continue;
+        }
+
         if (HUGE_VAL==point.xyzt.x) {
-            char *c = column (buf, 1);
-
-            /* if it's a comment or blank line, we reflect it */
-            if (c && ((*c=='\0') || (*c=='#'))) {
-                fprintf (fout, "%s\n", buf);
-                continue;
-            }
-
             /* otherwise, it must be a syntax error */
-            fprintf (fout, "# Record %d UNREADABLE: %s", (int) o->record_index, buf);
-            if (verbose)
-                fprintf (stderr, "%s: Could not parse file '%s' line %d\n", o->progname, opt_filename (o), opt_record (o));
+            print (PJ_LOG_NONE, "# Record %d UNREADABLE: %s", (int) o->record_index, buf);
+            print (PJ_LOG_ERROR, "%s: Could not parse file '%s' line %d\n", o->progname, opt_filename (o), opt_record (o));
             continue;
         }
 
@@ -266,26 +372,48 @@ int main(int argc, char **argv) {
 
         if (HUGE_VAL==point.xyzt.x) {
             /* transformation error */
-            fprintf (fout, "# Record %d TRANSFORMATION ERROR: %s (%s)",
-                            (int) o->record_index, buf, pj_strerrno (proj_errno(P)));
+            print (PJ_LOG_NONE, "# Record %d TRANSFORMATION ERROR: %s (%s)",
+                   (int) o->record_index, buf, pj_strerrno (proj_errno(P)));
             proj_errno_restore (P, err);
             continue;
         }
         proj_errno_restore (P, err);
 
+        /* handle comment string */
+        comment = column(buf, nfields+1);
+        if (opt_given(o, "c")) {
+            /* what number is the last coordinate column in the input data? */
+            int colmax = 0;
+            for (i=0; i<4; i++)
+                colmax = MAX(colmax, columns_xyzt[i]);
+            comment = column(buf, colmax+1);
+        }
+        comment_delimiter = (comment && *comment) ? whitespace : blank_comment;
+
         /* Time to print the result */
         if (proj_angular_output (P, direction)) {
             point.lpzt.lam = proj_todeg (point.lpzt.lam);
             point.lpzt.phi = proj_todeg (point.lpzt.phi);
-            fprintf (fout, "%14.10f  %14.10f  %12.4f  %12.4f\n", point.xyzt.x, point.xyzt.y, point.xyzt.z, point.xyzt.t);
+            print (PJ_LOG_NONE, "%14.*f  %14.*f  %12.*f  %12.4f%s%s\n",
+                   decimals_angles, point.xyzt.x,
+                   decimals_angles, point.xyzt.y,
+                   decimals_distances, point.xyzt.z,
+                   point.xyzt.t, comment_delimiter, comment
+            );
         }
         else
-            fprintf (fout, "%13.4f  %13.4f  %12.4f  %12.4f\n", point.xyzt.x, point.xyzt.y, point.xyzt.z, point.xyzt.t);
+            print (PJ_LOG_NONE, "%13.*f  %13.*f  %12.*f  %12.4f%s%s\n",
+                   decimals_distances, point.xyzt.x,
+                   decimals_distances, point.xyzt.y,
+                   decimals_distances, point.xyzt.z,
+                   point.xyzt.t, comment_delimiter, comment
+            );
     }
 
     if (stdout != fout)
         fclose (fout);
     free (o);
+    free (buf);
     return 0;
 }
 

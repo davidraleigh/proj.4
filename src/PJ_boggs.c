@@ -1,10 +1,11 @@
 #define PJ_LIB__
-# include	<errno.h>
-# include	<projects.h>
+#include <math.h>
+
+#include "projects.h"
+
 PROJ_HEAD(boggs, "Boggs Eumorphic") "\n\tPCyl., no inv., Sph.";
 # define NITER	20
 # define EPS	1e-7
-# define ONETOL 1.000001
 # define FXC	2.00276
 # define FXC2	1.11072
 # define FYC	0.49931
@@ -40,5 +41,3 @@ PJ *PROJECTION(boggs) {
     P->fwd = s_forward;
     return P;
 }
-
-

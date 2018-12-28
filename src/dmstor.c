@@ -1,7 +1,11 @@
 /* Convert DMS string to radians */
-#include <projects.h>
-#include <string.h>
+
 #include <ctype.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "projects.h"
 
 static double proj_strtod(char *nptr, char **endptr);
 
@@ -30,7 +34,10 @@ dmstor_ctx(projCtx ctx, const char *is, char **rs) {
 		*rs = (char *)is;
 	/* copy sting into work space */
 	while (isspace(sign = *is)) ++is;
-	for (n = MAX_WORK, s = work, p = (char *)is; isgraph(*p) && --n ; )
+	n = MAX_WORK;
+	s = work;
+	p = (char *)is;
+	while (isgraph(*p) && --n)
 		*s++ = *p++;
 	*s = '\0';
 	/* it is possible that a really odd input (like lots of leading
@@ -38,7 +45,8 @@ dmstor_ctx(projCtx ctx, const char *is, char **rs) {
 	sign = *(s = work);
 	if (sign == '+' || sign == '-') s++;
 	else sign = '+';
-	for (v = 0., nl = 0 ; nl < 3 ; nl = n + 1 ) {
+	v = 0.;
+	for (nl = 0 ; nl < 3 ; nl = n + 1 ) {
 		if (!(isdigit(*s) || *s == '.')) break;
 		if ((tv = proj_strtod(s, &s)) == HUGE_VAL)
 			return tv;
@@ -51,7 +59,7 @@ dmstor_ctx(projCtx ctx, const char *is, char **rs) {
 			n = 2; break;
 		case 'r': case 'R':
 			if (nl) {
-				pj_ctx_set_errno( ctx, -16 );
+				pj_ctx_set_errno( ctx, PJD_ERR_WRONG_FORMAT_DMS_VALUE );
 				return HUGE_VAL;
 			}
 			++s;
@@ -63,7 +71,7 @@ dmstor_ctx(projCtx ctx, const char *is, char **rs) {
 			continue;
 		}
 		if (n < nl) {
-			pj_ctx_set_errno( ctx, -16 );
+			pj_ctx_set_errno( ctx, PJD_ERR_WRONG_FORMAT_DMS_VALUE );
 			return HUGE_VAL;
 		}
 		v += tv * vm[n];

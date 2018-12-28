@@ -1,5 +1,8 @@
 #define PJ_LIB__
-#include <proj.h>
+
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(cc, "Central Cylindrical") "\n\tCyl, Sph";
@@ -36,5 +39,3 @@ PJ *PROJECTION(cc) {
 
     return P;
 }
-
-

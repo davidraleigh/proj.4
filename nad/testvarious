@@ -139,20 +139,29 @@ $EXE +proj=geocent +datum=WGS84  \
 0.00    -0.00 6356752.31
 EOF
 #
-#echo "#############################################################" >> ${OUT}
-#echo Test conversion between geocentric latlong and geodetic latlong >> ${OUT}
+echo "#############################################################" >> ${OUT}
+echo Test conversion from geocentric latlong to geodetic latlong >> ${OUT}
 #
-# The +geoc flag does not currently work with pj_transform() so this is
-# disabled.
+$EXE +proj=latlong +datum=WGS84 +geoc \
+ +to +proj=latlong +datum=WGS84  \
+ -E >>${OUT} <<EOF
+0d00'00.000"W 0d00'00.000"N 0.0
+79d00'00.000"W 45d00'00.000"N 0.0
+12d00'00.000"W 45d00'00.000"N 0.0
+0d00'00.000"W 90d00'00.000"N 0.0
+EOF
 #
-#$EXE +proj=latlong +datum=WGS84 +geoc \
-# +to +proj=latlong +datum=WGS84  \
-# -E >>${OUT} <<EOF
-#0d00'00.000"W 0d00'00.000"N 0.0
-#79d00'00.000"W 45d00'00.000"N 0.0
-#12d00'00.000"W 45d00'00.000"N 0.0
-#0d00'00.000"W 90d00'00.000"N 0.0
-#EOF
+echo "#############################################################" >> ${OUT}
+echo Test conversion from geodetic latlong to geocentric latlong >> ${OUT}
+#
+$EXE +proj=latlong +datum=WGS84 \
+ +to +proj=latlong +datum=WGS84 +geoc  \
+ -E >>${OUT} <<EOF
+0d00'00.000"W 0d00'00.000"N 0.0
+79d00'00.000"W 44d48'27.276"N 0.000
+12d00'00.000"W 44d48'27.276"N 0.0
+0d00'00.000"W 90d00'00.000"N 0.0
+EOF
 #
 echo "##############################################################" >> ${OUT}
 echo "Test stere projection (re: win32 ticket 12)" >> ${OUT}
@@ -782,11 +791,11 @@ EOF
 echo  "##############################################################" >> ${OUT}
 echo  "Test SCH inverse projection" >> ${OUT}
 #
-$EXE -f '%.7f' \
+$EXE -f '%.6f' \
     +proj=sch +datum=WGS84 +plat_0=30.0 +plon_0=45.0 +phdg_0=-12.0 +nodefs +to \
     +proj=latlong +datum=WGS84 \
  -E >> ${OUT} <<EOF
-0. 0.
+0. 0. 2.
 0. 1000.
 1000. 0.
 1000. 1000.
@@ -882,6 +891,47 @@ $EXE -f '%0.3f' \
 10007557.176093187 -5366413.421153781
 15011335.76413978 -8729502.054111844
 20015114.352186374 -11409566.822831295
+EOF
+echo  "##############################################################" >> ${OUT}
+echo  "Test Web Mercator to avoid issue #834 in the future" >> ${OUT}
+#
+$EXE -f '%0.3f' \
+    +proj=utm +zone=15 +datum=NAD83 \
+    +to +proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 \
+    +k=1.0 +units=m +nadgrids=@null \
+ -E >> ${OUT} <<EOF
+487147.594520173 4934316.46263998
+EOF
+
+echo  "##############################################################" >> ${OUT}
+echo  "Test vto_meter" >> ${OUT}
+#
+$EXE -f '%0.3f' \
+    +proj=longlat +a=1 +b=1 +vto_meter=1000 \
+    +to +proj=longlat +a=1 +b=1  \
+ -E >> ${OUT} <<EOF
+0 0 1
+EOF
+
+$EXE -f '%0.3f' \
+    +proj=merc +a=1 +b=1 +vto_meter=1000 \
+    +to +proj=longlat +a=1 +b=1  \
+ -E >> ${OUT} <<EOF
+0 0 1
+EOF
+
+$EXE -f '%0.3f' \
+    +proj=longlat +a=1 +b=1 \
+    +to +proj=longlat +a=1 +b=1 +vto_meter=1000 \
+ -E >> ${OUT} <<EOF
+0 0 1000
+EOF
+
+$EXE -f '%0.3f' \
+    +proj=longlat +a=1 +b=1 \
+    +to +proj=merc +a=1 +b=1 +vto_meter=1000 \
+ -E >> ${OUT} <<EOF
+0 0 1000
 EOF
 
 

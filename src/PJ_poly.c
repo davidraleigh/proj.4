@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(poly, "Polyconic (American)")
@@ -68,7 +71,8 @@ static LP e_inverse (XY xy, PJ *P) {          /* Ellipsoidal, inverse */
         int i;
 
         r = xy.y * xy.y + xy.x * xy.x;
-        for (lp.phi = xy.y, i = I_ITER; i ; --i) {
+        lp.phi = xy.y;
+        for (i = I_ITER; i ; --i) {
             sp = sin(lp.phi);
             s2ph = sp * ( cp = cos(lp.phi));
             if (fabs(cp) < ITOL) {
@@ -163,4 +167,3 @@ PJ *PROJECTION(poly) {
 
     return P;
 }
-

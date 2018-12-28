@@ -1,7 +1,8 @@
 #define PJ_LIB__
 #include <errno.h>
-#include <proj.h>
+#include "proj.h"
 #include "projects.h"
+#include "proj_math.h"
 
 
 enum Type {
@@ -52,7 +53,6 @@ static int phi12(PJ *P, double *del) {
         *del = 0.5 * (p2 - p1);
         P->opaque->sig = 0.5 * (p2 + p1);
         err = (fabs(*del) < EPS || fabs(P->opaque->sig) < EPS) ? PJD_ERR_ABS_LAT1_EQ_ABS_LAT2 : 0;
-        *del = *del;
     }
     return err;
 }

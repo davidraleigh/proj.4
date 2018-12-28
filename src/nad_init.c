@@ -27,10 +27,13 @@
 
 #define PJ_LIB__
 
-#include <projects.h>
-#include <stdio.h>
 #include <errno.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include "projects.h"
 
 /************************************************************************/
 /*                             swap_words()                             */
@@ -38,8 +41,8 @@
 /*      Convert the byte order of the given word(s) in place.           */
 /************************************************************************/
 
-static int  byte_order_test = 1;
-#define IS_LSB	(((unsigned char *) (&byte_order_test))[0] == 1)
+static const int  byte_order_test = 1;
+#define IS_LSB	(((const unsigned char *) (&byte_order_test))[0] == 1)
 
 static void swap_words( void *data_in, int word_size, int word_count )
 
@@ -87,8 +90,8 @@ int nad_ctable_load( projCtx ctx, struct CTABLE *ct, PAFile fid )
         ct->cvs = NULL;
 
         pj_log( ctx, PJ_LOG_ERROR, 
-                "ctable loading failed on fread() - binary incompatible?\n" );
-        pj_ctx_set_errno( ctx, -38 );
+                "ctable loading failed on fread() - binary incompatible?" );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         return 0;
     }
 
@@ -111,7 +114,7 @@ struct CTABLE *nad_ctable_init( projCtx ctx, PAFile fid )
     if( ct == NULL 
         || pj_ctx_fread( ctx, ct, sizeof(struct CTABLE), 1, fid ) != 1 )
     {
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         pj_dalloc( ct );
         return NULL;
     }
@@ -120,7 +123,7 @@ struct CTABLE *nad_ctable_init( projCtx ctx, PAFile fid )
     if( ct->lim.lam < 1 || ct->lim.lam > 100000 
         || ct->lim.phi < 1 || ct->lim.phi > 100000 )
     {
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         pj_dalloc( ct );
         return NULL;
     }
@@ -167,7 +170,7 @@ int nad_ctable2_load( projCtx ctx, struct CTABLE *ct, PAFile fid )
             "ctable2 loading failed on fread() - binary incompatible?\n" );
         }
 
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         return 0;
     }
 
@@ -193,7 +196,7 @@ struct CTABLE *nad_ctable2_init( projCtx ctx, PAFile fid )
 
     if( pj_ctx_fread( ctx, header, sizeof(header), 1, fid ) != 1 )
     {
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         return NULL;
     }
 
@@ -206,7 +209,7 @@ struct CTABLE *nad_ctable2_init( projCtx ctx, PAFile fid )
     if( strncmp(header,"CTABLE V2",9) != 0 )
     {
         pj_log( ctx, PJ_LOG_ERROR, "ctable2 - wrong header!" );
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         return NULL;
     }
 
@@ -230,7 +233,7 @@ struct CTABLE *nad_ctable2_init( projCtx ctx, PAFile fid )
     if( ct->lim.lam < 1 || ct->lim.lam > 100000 
         || ct->lim.phi < 1 || ct->lim.phi > 100000 )
     {
-        pj_ctx_set_errno( ctx, -38 );
+        pj_ctx_set_errno( ctx, PJD_ERR_FAILED_TO_LOAD_GRID );
         pj_dalloc( ct );
         return NULL;
     }

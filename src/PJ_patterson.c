@@ -33,13 +33,16 @@
  *    Patterson, T., Savric, B., and Jenny, B. (2015). Cartographic Perspectives
  *       (No.78). Describes the projection design and characteristics, and
  *       developing the equations.    doi:10.14714/CP78.1270
- *       http://dx.doi.org/10.14714/CP78.1270
+ *       https://doi.org/10.14714/CP78.1270
  *
  * Port to PROJ.4 by Micah Cochran, 26 March 2016
  */
 
 #define PJ_LIB__
-#include <projects.h>
+
+#include <math.h>
+
+#include "projects.h"
 
 PROJ_HEAD(patterson, "Patterson Cylindrical") "\n\tCyl.";
 
@@ -112,4 +115,3 @@ PJ *PROJECTION(patterson) {
 
     return P;
 }
-

@@ -1,5 +1,8 @@
 #define PJ_LIB__
-#include    <projects.h>
+
+#include <math.h>
+
+#include "projects.h"
 
 PROJ_HEAD(eck4, "Eckert IV") "\n\tPCyl, Sph.";
 
@@ -44,9 +47,9 @@ static LP s_inverse (XY xy, PJ *P) {           /* Spheroidal, inverse */
     LP lp = {0.0,0.0};
     double c;
 
-    lp.phi = aasin(P->ctx,xy.y / C_y);
+    lp.phi = aasin(P->ctx,xy.y * RC_y);
     lp.lam = xy.x / (C_x * (1. + (c = cos(lp.phi))));
-    lp.phi = aasin(P->ctx,(lp.phi + sin(lp.phi) * (c + 2.)) / C_p);
+    lp.phi = aasin(P->ctx,(lp.phi + sin(lp.phi) * (c + 2.)) * RC_p);
     return lp;
 }
 
@@ -58,4 +61,3 @@ PJ *PROJECTION(eck4) {
 
     return P;
 }
-

@@ -31,8 +31,11 @@
  ****************************************************************************/
 
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 #include "geocent.h"
 
@@ -225,4 +228,3 @@ PJ *PROJECTION(sch) {
 
     return setup(P);
 }
-

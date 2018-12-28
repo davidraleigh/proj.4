@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(imw_p, "International Map of the World Polyconic")
@@ -29,7 +32,7 @@ static int phi12(PJ *P, double *del, double *sig) {
 
     if (!pj_param(P->ctx, P->params, "tlat_1").i ||
         !pj_param(P->ctx, P->params, "tlat_2").i) {
-        err = -41;
+        err = PJD_ERR_LAT_1_2_UNSPECIFIED;
     } else {
         Q->phi_1 = pj_param(P->ctx, P->params, "rlat_1").f;
         Q->phi_2 = pj_param(P->ctx, P->params, "rlat_2").f;
@@ -91,10 +94,8 @@ static XY loc_for(LP lp, PJ *P, double *yc) {
 
 
 static XY e_forward (LP lp, PJ *P) {          /* Ellipsoidal, forward */
-    XY xy = {0.0,0.0};
     double yc;
-
-    xy = loc_for(lp, P, &yc);
+    XY xy = loc_for(lp, P, &yc);
     return (xy);
 }
 
@@ -105,7 +106,7 @@ static LP e_inverse (XY xy, PJ *P) {          /* Ellipsoidal, inverse */
     XY t;
     double yc = 0.0;
     int i = 0;
-    const int N_MAX_ITER = 1000; /* Arbitrarily choosen number... */
+    const int N_MAX_ITER = 1000; /* Arbitrarily chosen number... */
 
     lp.phi = Q->phi_2;
     lp.lam = xy.x / cos(lp.phi);
@@ -210,4 +211,3 @@ PJ *PROJECTION(imw_p) {
 
     return P;
 }
-

@@ -1,10 +1,14 @@
-
 #define _IN_GEOD_SET
 
+#include <math.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include "proj.h"
 #include "projects.h"
 #include "geod_interface.h"
 #include "emess.h"
+
 	void
 geod_set(int argc, char **argv) {
 	paralist *start = 0, *curr;
@@ -18,7 +22,7 @@ geod_set(int argc, char **argv) {
 	start = curr = pj_mkparam(argv[0]);
 	if (!curr)
 		emess(1, "memory allocation failed");
-	for (i = 1; i < argc; ++i) {
+	for (i = 1; curr != 0 && i < argc; ++i) {
 		curr->next = pj_mkparam(argv[i]);
 		if (!curr->next)
 			emess(1, "memory allocation failed");
@@ -29,13 +33,14 @@ geod_set(int argc, char **argv) {
 	/* set units */
 	if ((name = pj_param(NULL,start, "sunits").s) != NULL) {
 		char *s;
-                struct PJ_UNITS *unit_list = pj_get_units_ref();
+                const struct PJ_UNITS *unit_list = proj_list_units();
 		for (i = 0; (s = unit_list[i].id) && strcmp(name, s) ; ++i) ;
 		if (!s)
 			emess(1,"%s unknown unit conversion id", name);
-		fr_meter = 1. / (to_meter = atof(unit_list[i].to_meter));
+		to_meter = unit_list[i].factor;
+		fr_meter = 1 / to_meter;
 	} else
-		to_meter = fr_meter = 1.;
+		to_meter = fr_meter = 1;
 	geod_f = es/(1 + sqrt(1 - es));
 	geod_ini();
 	/* check if line or arc mode */

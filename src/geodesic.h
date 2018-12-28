@@ -107,7 +107,7 @@
  * twice about restructuring the internals of the C code since this may make
  * porting fixes from the C++ code more difficult.
  *
- * Copyright (c) Charles Karney (2012-2017) <charles@karney.com> and licensed
+ * Copyright (c) Charles Karney (2012-2018) <charles@karney.com> and licensed
  * under the MIT/X11 License.  For more information, see
  * https://geographiclib.sourceforge.io/
  *
@@ -132,7 +132,7 @@
  * The patch level of the geodesic library.  (This tracks the version of
  * GeographicLib.)
  **********************************************************************/
-#define GEODESIC_VERSION_PATCH 0
+#define GEODESIC_VERSION_PATCH 3
 
 /**
  * Pack the version components into a single integer.  Users should not rely on
@@ -633,7 +633,7 @@ extern "C" {
   /**
    * Specify position of point 3 in terms of distance.
    *
-   * @param[inout] l a pointer to the geod_geodesicline object.
+   * @param[in,out] l a pointer to the geod_geodesicline object.
    * @param[in] s13 the distance from point 1 to point 3 (meters); it
    *   can be negative.
    *
@@ -645,7 +645,7 @@ extern "C" {
   /**
    * Specify position of point 3 in terms of either distance or arc length.
    *
-   * @param[inout] l a pointer to the geod_geodesicline object.
+   * @param[in,out] l a pointer to the geod_geodesicline object.
    * @param[in] flags either GEOD_NOFLAGS or GEOD_ARCMODE to determining the
    *   meaning of the \e s13_a13.
    * @param[in] s13_a13 if \e flags = GEOD_NOFLAGS, this is the distance

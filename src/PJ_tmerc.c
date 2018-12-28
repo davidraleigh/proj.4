@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(tmerc, "Transverse Mercator") "\n\tCyl, Sph&Ell";
@@ -38,7 +41,7 @@ static XY e_forward (LP lp, PJ *P) {          /* Ellipsoidal, forward */
     if( lp.lam < -M_HALFPI || lp.lam > M_HALFPI ) {
         xy.x = HUGE_VAL;
         xy.y = HUGE_VAL;
-        pj_ctx_set_errno( P->ctx, -14 );
+        pj_ctx_set_errno( P->ctx, PJD_ERR_LAT_OR_LON_EXCEED_LIMIT );
         return xy;
     }
 
@@ -79,7 +82,7 @@ static XY s_forward (LP lp, PJ *P) {           /* Spheroidal, forward */
     if( lp.lam < -M_HALFPI || lp.lam > M_HALFPI ) {
         xy.x = HUGE_VAL;
         xy.y = HUGE_VAL;
-        pj_ctx_set_errno( P->ctx, -14 );
+        pj_ctx_set_errno( P->ctx, PJD_ERR_LAT_OR_LON_EXCEED_LIMIT );
         return xy;
     }
 
@@ -203,4 +206,3 @@ PJ *PROJECTION(tmerc) {
 
     return setup(P);
 }
-

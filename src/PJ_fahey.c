@@ -1,5 +1,8 @@
 #define PJ_LIB__
-#include <projects.h>
+
+#include <math.h>
+
+#include "projects.h"
 
 PROJ_HEAD(fahey, "Fahey") "\n\tPcyl, Sph.";
 
@@ -36,4 +39,3 @@ PJ *PROJECTION(fahey) {
 
     return P;
 }
-

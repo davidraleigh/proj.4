@@ -28,16 +28,18 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *****************************************************************************/
-# define PJ_LIB__
-# include <errno.h>
-# include "proj_internal.h"
-# include <proj.h>
-# include "projects.h"
+#define PJ_LIB__
+
+#include <errno.h>
+#include <math.h>
+
+#include "proj_internal.h"
+#include "proj.h"
+#include "projects.h"
 
 PROJ_HEAD(healpix, "HEALPix") "\n\tSph., Ellps.";
 PROJ_HEAD(rhealpix, "rHEALPix") "\n\tSph., Ellps.\n\tnorth_square= south_square=";
 
-# include <stdio.h>
 /* Matrix for counterclockwise rotation by pi/2: */
 # define R1 {{ 0,-1},{ 1, 0}}
 /* Matrix for counterclockwise rotation by pi: */
@@ -64,14 +66,14 @@ typedef struct {
     enum Region {north, south, equatorial} region;
 } CapMap;
 
-double rot[7][2][2] = ROT;
+static const double rot[7][2][2] = ROT;
 
 /**
  * Returns the sign of the double.
  * @param v the parameter whose sign is returned.
  * @return 1 for positive number, -1 for negative, and 0 for zero.
  **/
-static double pj_sign (double v) {
+static double sign (double v) {
     return v > 0 ? 1 : (v < 0 ? -1 : 0);
 }
 
@@ -236,7 +238,7 @@ static double auth_lat(PJ *P, double alpha, int inverse) {
 
         if (fabs(ratio) > 1) {
             /* Rounding error. */
-            ratio = pj_sign(ratio);
+            ratio = sign(ratio);
         }
         return asin(ratio);
     } else {
@@ -269,7 +271,7 @@ static XY healpix_sphere(LP lp) {
         }
         lamc = -3*M_FORTPI + M_HALFPI*cn;
         xy.x = lamc + (lam - lamc)*sigma;
-        xy.y = pj_sign(phi)*M_FORTPI*(2 - sigma);
+        xy.y = sign(phi)*M_FORTPI*(2 - sigma);
     }
     return xy;
 }
@@ -297,10 +299,10 @@ static LP healpix_sphere_inverse(XY xy) {
         xc = -3*M_FORTPI + M_HALFPI*cn;
         tau = 2.0 - 4*fabs(y)/M_PI;
         lp.lam = xc + (x - xc)/tau;
-        lp.phi = pj_sign(y)*asin(1.0 - pow(tau, 2)/3.0);
+        lp.phi = sign(y)*asin(1.0 - pow(tau, 2)/3.0);
     } else {
         lp.lam = -M_PI;
-        lp.phi = pj_sign(y)*M_HALFPI;
+        lp.phi = sign(y)*M_HALFPI;
     }
     return (lp);
 }
@@ -310,7 +312,7 @@ static LP healpix_sphere_inverse(XY xy) {
  * Return the vector sum a + b, where a and b are 2-dimensional vectors.
  * @param ret holds a + b.
  **/
-static void vector_add(double a[2], double b[2], double *ret) {
+static void vector_add(const double a[2], const double b[2], double *ret) {
     int i;
     for(i = 0; i < 2; i++) {
         ret[i] = a[i] + b[i];
@@ -322,7 +324,7 @@ static void vector_add(double a[2], double b[2], double *ret) {
  * Return the vector difference a - b, where a and b are 2-dimensional vectors.
  * @param ret holds a - b.
  **/
-static void vector_sub(double a[2], double b[2], double*ret) {
+static void vector_sub(const double a[2], const double b[2], double*ret) {
     int i;
     for(i = 0; i < 2; i++) {
         ret[i] = a[i] - b[i];
@@ -335,7 +337,7 @@ static void vector_sub(double a[2], double b[2], double*ret) {
  * b is a 2 x 1 matrix.
  * @param ret holds a*b.
  **/
-static void dot_product(double a[2][2], double b[2], double *ret) {
+static void dot_product(const double a[2][2], const double b[2], double *ret) {
     int i, j;
     int length = 2;
     for(i = 0; i < length; i++) {
@@ -453,7 +455,7 @@ static XY combine_caps(double x, double y, int north_square, int south_square,
     double vector[2];
     double v_min_c[2];
     double ret_dot[2];
-    double (*tmpRot)[2];
+    const double (*tmpRot)[2];
     int pole = 0;
 
     CapMap capmap = get_cap(x, y, north_square, south_square, inverse);
@@ -526,7 +528,7 @@ static LP s_healpix_inverse(XY xy, PJ *P) { /* sphere */
         LP lp;
         lp.lam = HUGE_VAL;
         lp.phi = HUGE_VAL;
-        pj_ctx_set_errno(P->ctx, -15);
+        pj_ctx_set_errno(P->ctx, PJD_ERR_INVALID_X_OR_Y);
         return lp;
     }
     return healpix_sphere_inverse(xy);
@@ -540,7 +542,7 @@ static LP e_healpix_inverse(XY xy, PJ *P) { /* ellipsoid */
     if (in_image(xy.x, xy.y, 0, 0, 0) == 0) {
         lp.lam = HUGE_VAL;
         lp.phi = HUGE_VAL;
-        pj_ctx_set_errno(P->ctx, -15);
+        pj_ctx_set_errno(P->ctx, PJD_ERR_INVALID_X_OR_Y);
         return lp;
     }
     lp = healpix_sphere_inverse(xy);
@@ -574,7 +576,7 @@ static LP s_rhealpix_inverse(XY xy, PJ *P) { /* sphere */
         LP lp;
         lp.lam = HUGE_VAL;
         lp.phi = HUGE_VAL;
-        pj_ctx_set_errno(P->ctx, -15);
+        pj_ctx_set_errno(P->ctx, PJD_ERR_INVALID_X_OR_Y);
         return lp;
     }
     xy = combine_caps(xy.x, xy.y, Q->north_square, Q->south_square, 1);
@@ -590,7 +592,7 @@ static LP e_rhealpix_inverse(XY xy, PJ *P) { /* ellipsoid */
     if (in_image(xy.x, xy.y, 1, Q->north_square, Q->south_square) == 0) {
         lp.lam = HUGE_VAL;
         lp.phi = HUGE_VAL;
-        pj_ctx_set_errno(P->ctx, -15);
+        pj_ctx_set_errno(P->ctx, PJD_ERR_INVALID_X_OR_Y);
         return lp;
     }
     xy = combine_caps(xy.x, xy.y, Q->north_square, Q->south_square, 1);
@@ -668,4 +670,3 @@ PJ *PROJECTION(rhealpix) {
 
     return P;
 }
-

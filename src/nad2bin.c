@@ -13,8 +13,8 @@
 /*      Convert the byte order of the given word(s) in place.           */
 /************************************************************************/
 
-static int  byte_order_test = 1;
-#define IS_LSB	(((unsigned char *) (&byte_order_test))[0] == 1)
+static const int  byte_order_test = 1;
+#define IS_LSB	(((const unsigned char *) (&byte_order_test))[0] == 1)
 
 static void swap_words( void *data_in, int word_size, int word_count )
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 /* ==================================================================== */
     for( i = 1; i < argc; i++ )
     {
-        if( strcmp(argv[i],"-f") == 0 && i < argc-1 ) 
+        if( i < argc-1 && strcmp(argv[i],"-f") == 0 ) 
         {
             format = argv[++i];
         }
@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
         perror("fgets");
         exit(1);
     }
+    /* cppcheck-suppress invalidscanf */
     if ( EOF == scanf("%d %d %*d %lf %lf %lf %lf", &ct.lim.lam, &ct.lim.phi,
           &ct.ll.lam, &ct.del.lam, &ct.ll.phi, &ct.del.phi) ) {
         perror("scanf");
@@ -118,7 +119,9 @@ int main(int argc, char **argv) {
     ct.del.lam *= DEG_TO_RAD;
     ct.del.phi *= DEG_TO_RAD;
     /* load table */
-    for (p = ct.cvs, i = 0; i < ct.lim.phi; ++i) {
+    p = ct.cvs;
+    for (i = 0; i < ct.lim.phi; ++i) {
+        /* cppcheck-suppress invalidscanf */
         if ( EOF == scanf("%d:%ld %ld", &ichk, &laml, &phil) ) {
             perror("scanf on row");
             exit(1);
@@ -131,6 +134,7 @@ int main(int argc, char **argv) {
         t.phi = (float) (phil * U_SEC_TO_RAD);
         *p++ = t;
         for (j = 1; j < ct.lim.lam; ++j) {
+            /* cppcheck-suppress invalidscanf */
             if ( EOF == scanf("%ld %ld", &lam, &phi) ) {
                 perror("scanf on column");
                 exit(1);
@@ -177,7 +181,9 @@ int main(int argc, char **argv) {
             exit(2);
 	}
 
+	/* cppcheck-suppress sizeofCalculation */
         STATIC_ASSERT( MAX_TAB_ID == 80 );
+        /* cppcheck-suppress sizeofCalculation */
         STATIC_ASSERT( sizeof(pj_int32) == 4 ); /* for ct.lim.lam/phi */
 
         memset( header, 0, sizeof(header) );
@@ -273,6 +279,7 @@ int main(int argc, char **argv) {
             ur.lam = ct.ll.lam + (ct.lim.lam-1) * ct.del.lam;
             ur.phi = ct.ll.phi + (ct.lim.phi-1) * ct.del.phi;
 
+            /* cppcheck-suppress sizeofCalculation */
             STATIC_ASSERT( sizeof(nGSCount) == 4 );
 
             memset( achHeader, 0, sizeof(achHeader) );

@@ -18,13 +18,17 @@
  *
  * See the comments in geodesic.h for documentation.
  *
- * Copyright (c) Charles Karney (2012-2017) <charles@karney.com> and licensed
+ * Copyright (c) Charles Karney (2012-2018) <charles@karney.com> and licensed
  * under the MIT/X11 License.  For more information, see
  * https://geographiclib.sourceforge.io/
  */
 
 #include "geodesic.h"
+#ifdef PJ_LIB__
+#include "proj_math.h"
+#else
 #include <math.h>
+#endif
 
 #if !defined(HAVE_C99_MATH)
 #define HAVE_C99_MATH 0
@@ -89,10 +93,15 @@ static void Init() {
     tolb = tol0 * tol2;
     xthresh = 1000 * tol2;
     degree = pi/180;
+    #if defined(NAN)
+    NaN = NAN;
+    #else
     {
       real minus1 = -1;
+      /* cppcheck-suppress wrongmathcall */
       NaN = sqrt(minus1);
     }
+    #endif
     init = 1;
   }
 }
@@ -185,8 +194,18 @@ static real AngNormalize(real x) {
   x = remainder(x, (real)(360));
   return x != -180 ? x : 180;
 #else
-  x = fmod(x, (real)(360));
-  return x <= -180 ? x + 360 : (x <= 180 ? x : x - 360);
+  real y = fmod(x, (real)(360));
+#if defined(_MSC_VER) && _MSC_VER < 1900
+  /*
+   * Before version 14 (2015), Visual Studio had problems dealing
+   * with -0.0.  Specifically
+   *   VC 10,11,12 and 32-bit compile: fmod(-0.0, 360.0) -> +0.0
+   * sincosdx has a similar fix.
+   * python 2.7 on Windows 32-bit machines has the same problem.
+   */
+  if (x == 0) y = x;
+#endif
+  return y <= -180 ? y + 360 : (y <= 180 ? y : y - 360);
 #endif
 }
 
@@ -224,13 +243,25 @@ static void sincosdx(real x, real* sinx, real* cosx) {
   r = remquo(x, (real)(90), &q);
 #else
   r = fmod(x, (real)(360));
-  q = (int)(floor(r / 90 + (real)(0.5)));
+  /* check for NaN */
+  q = r == r ? (int)(floor(r / 90 + (real)(0.5))) : 0;
   r -= 90 * q;
 #endif
   /* now abs(r) <= 45 */
   r *= degree;
   /* Possibly could call the gnu extension sincos */
   s = sin(r); c = cos(r);
+#if defined(_MSC_VER) && _MSC_VER < 1900
+  /*
+   * Before version 14 (2015), Visual Studio had problems dealing
+   * with -0.0.  Specifically
+   *   VC 10,11,12 and 32-bit compile: fmod(-0.0, 360.0) -> +0.0
+   *   VC 12       and 64-bit compile:  sin(-0.0)        -> +0.0
+   * AngNormalize has a similar fix.
+   * python 2.7 on Windows 32-bit machines has the same problem.
+   */
+  if (x == 0) s = x;
+#endif
   switch ((unsigned)q & 3U) {
   case 0U: *sinx =  s; *cosx =  c; break;
   case 1U: *sinx =  c; *cosx = -s; break;
@@ -300,7 +331,7 @@ static real Lambda12(const struct geod_geodesic* g,
                      real* pssig1, real* pcsig1,
                      real* pssig2, real* pcsig2,
                      real* peps,
-                     real* pgomg12,
+                     real* pdomg12,
                      boolx diffp, real* pdlam12,
                      /* Scratch area of the right size */
                      real Ca[]);
@@ -450,10 +481,10 @@ void geod_lineinit(struct geod_geodesicline* l,
 void geod_gendirectline(struct geod_geodesicline* l,
                         const struct geod_geodesic* g,
                         real lat1, real lon1, real azi1,
-                        unsigned flags, real a12_s12,
+                        unsigned flags, real s12_a12,
                         unsigned caps) {
   geod_lineinit(l, g, lat1, lon1, azi1, caps);
-  geod_gensetdistance(l, flags, a12_s12);
+  geod_gensetdistance(l, flags, s12_a12);
 }
 
 void geod_directline(struct geod_geodesicline* l,
@@ -560,7 +591,7 @@ real geod_genposition(const struct geod_geodesicline* l,
   salp2 = l->salp0; calp2 = l->calp0 * csig2; /* No need to normalize */
 
   if (outmask & GEOD_DISTANCE)
-    s12 = flags & GEOD_ARCMODE ?
+    s12 = (flags & GEOD_ARCMODE) ?
       l->b * ((1 + l->A1m1) * sig12 + AB1) :
       s12_a12;
 
@@ -569,7 +600,7 @@ real geod_genposition(const struct geod_geodesicline* l,
     /* tan(omg2) = sin(alp0) * tan(sig2) */
     somg2 = l->salp0 * ssig2; comg2 = csig2;  /* No need to normalize */
     /* omg12 = omg2 - omg1 */
-    omg12 = flags & GEOD_LONG_UNROLL
+    omg12 = (flags & GEOD_LONG_UNROLL)
       ? E * (sig12
              - (atan2(    ssig2, csig2) - atan2(    l->ssig1, l->csig1))
              + (atan2(E * somg2, comg2) - atan2(E * l->somg1, l->comg1)))
@@ -579,7 +610,7 @@ real geod_genposition(const struct geod_geodesicline* l,
       ( sig12 + (SinCosSeries(TRUE, ssig2, csig2, l->C3a, nC3-1)
                  - l->B31));
     lon12 = lam12 / degree;
-    lon2 = flags & GEOD_LONG_UNROLL ? l->lon1 + lon12 :
+    lon2 = (flags & GEOD_LONG_UNROLL) ? l->lon1 + lon12 :
       AngNormalize(AngNormalize(l->lon1) + AngNormalize(lon12));
   }
 
@@ -632,24 +663,32 @@ real geod_genposition(const struct geod_geodesicline* l,
     S12 = l->c2 * atan2(salp12, calp12) + l->A4 * (B42 - l->B41);
   }
 
-  if (outmask & GEOD_LATITUDE)
+  /* In the pattern
+   *
+   *   if ((outmask & GEOD_XX) && pYY)
+   *     *pYY = YY;
+   *
+   * the second check "&& pYY" is redundant.  It's there to make the CLang
+   * static analyzer happy.
+   */
+  if ((outmask & GEOD_LATITUDE) && plat2)
     *plat2 = lat2;
-  if (outmask & GEOD_LONGITUDE)
+  if ((outmask & GEOD_LONGITUDE) && plon2)
     *plon2 = lon2;
-  if (outmask & GEOD_AZIMUTH)
+  if ((outmask & GEOD_AZIMUTH) && pazi2)
     *pazi2 = azi2;
-  if (outmask & GEOD_DISTANCE)
+  if ((outmask & GEOD_DISTANCE) && ps12)
     *ps12 = s12;
-  if (outmask & GEOD_REDUCEDLENGTH)
+  if ((outmask & GEOD_REDUCEDLENGTH) && pm12)
     *pm12 = m12;
   if (outmask & GEOD_GEODESICSCALE) {
     if (pM12) *pM12 = M12;
     if (pM21) *pM21 = M21;
   }
-  if (outmask & GEOD_AREA)
+  if ((outmask & GEOD_AREA) && pS12)
     *pS12 = S12;
 
-  return flags & GEOD_ARCMODE ? s12_a12 : sig12 / degree;
+  return (flags & GEOD_ARCMODE) ? s12_a12 : sig12 / degree;
 }
 
 void geod_setdistance(struct geod_geodesicline* l, real s13) {
@@ -664,7 +703,7 @@ static void geod_setarc(struct geod_geodesicline* l, real a13) {
 
 void geod_gensetdistance(struct geod_geodesicline* l,
  unsigned flags, real s13_a13) {
-  flags & GEOD_ARCMODE ?
+  (flags & GEOD_ARCMODE) ?
     geod_setarc(l, s13_a13) :
     geod_setdistance(l, s13_a13);
 }
@@ -693,7 +732,7 @@ real geod_gendirect(const struct geod_geodesic* g,
   geod_lineinit(&l, g, lat1, lon1, azi1,
                 /* Automatically supply GEOD_DISTANCE_IN if necessary */
                 outmask |
-                (flags & GEOD_ARCMODE ? GEOD_NONE : GEOD_DISTANCE_IN));
+                ((flags & GEOD_ARCMODE) ? GEOD_NONE : GEOD_DISTANCE_IN));
   return geod_genposition(&l, flags, s12_a12,
                           plat2, plon2, pazi2, ps12, pm12, pM12, pM21, pS12);
 }
@@ -820,8 +859,8 @@ static real geod_geninverse_int(const struct geod_geodesic* g,
                                   csig1 * csig2 + ssig1 * ssig2);
     Lengths(g, g->n, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
             cbet1, cbet2, &s12x, &m12x, 0,
-            outmask & GEOD_GEODESICSCALE ? &M12 : 0,
-            outmask & GEOD_GEODESICSCALE ? &M21 : 0,
+            (outmask & GEOD_GEODESICSCALE) ? &M12 : 0,
+            (outmask & GEOD_GEODESICSCALE) ? &M21 : 0,
             Ca);
     /* Add the check for sig12 since zero length geodesics might yield m12 <
      * 0.  Test case was
@@ -893,8 +932,9 @@ static real geod_geninverse_int(const struct geod_geodesic* g,
       unsigned numit = 0;
       /* Bracketing range */
       real salp1a = tiny, calp1a = 1, salp1b = tiny, calp1b = -1;
-      boolx tripn, tripb;
-      for (tripn = FALSE, tripb = FALSE; numit < maxit2; ++numit) {
+      boolx tripn = FALSE;
+      boolx tripb = FALSE;
+      for (; numit < maxit2; ++numit) {
         /* the WGS84 test set: mean = 1.47, sd = 1.25, max = 16
          * WGS84 and random input: mean = 2.85, sd = 0.60 */
         real dv = 0,
@@ -944,8 +984,8 @@ static real geod_geninverse_int(const struct geod_geodesic* g,
       }
       Lengths(g, eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
               cbet1, cbet2, &s12x, &m12x, 0,
-              outmask & GEOD_GEODESICSCALE ? &M12 : 0,
-              outmask & GEOD_GEODESICSCALE ? &M21 : 0, Ca);
+              (outmask & GEOD_GEODESICSCALE) ? &M12 : 0,
+              (outmask & GEOD_GEODESICSCALE) ? &M21 : 0, Ca);
       m12x *= g->b;
       s12x *= g->b;
       a12 = sig12 / degree;
@@ -1101,7 +1141,7 @@ real SinCosSeries(boolx sinp, real sinx, real cosx, const real c[], int n) {
   real ar, y0, y1;
   c += (n + sinp);              /* Point to one beyond last element */
   ar = 2 * (cosx - sinx) * (cosx + sinx); /* 2 * cos(2 * x) */
-  y0 = n & 1 ? *--c : 0; y1 = 0;          /* accumulators for sum */
+  y0 = (n & 1) ? *--c : 0; y1 = 0;        /* accumulators for sum */
   /* Now n is even */
   n /= 2;
   while (n--) {
@@ -1788,13 +1828,13 @@ int transitdirect(real lon1, real lon2) {
 #if HAVE_C99_MATH
   lon1 = remainder(lon1, (real)(720));
   lon2 = remainder(lon2, (real)(720));
-  return ( (lon2 >= 0 && lon2 < 360 ? 0 : 1) -
-           (lon1 >= 0 && lon1 < 360 ? 0 : 1) );
+  return ( (lon2 <= 0 && lon2 > -360 ? 1 : 0) -
+           (lon1 <= 0 && lon1 > -360 ? 1 : 0) );
 #else
   lon1 = fmod(lon1, (real)(720));
   lon2 = fmod(lon2, (real)(720));
-  return ( ((lon2 >= 0 && lon2 < 360) || lon2 < -360 ? 0 : 1) -
-           ((lon1 >= 0 && lon1 < 360) || lon1 < -360 ? 0 : 1) );
+  return ( ((lon2 <= 0 && lon2 > -360) || lon2 > 360 ? 1 : 0) -
+           ((lon1 <= 0 && lon1 > -360) || lon1 > 360 ? 1 : 0) );
 #endif
 }
 
@@ -1867,8 +1907,10 @@ void geod_polygon_addpoint(const struct geod_geodesic* g,
 void geod_polygon_addedge(const struct geod_geodesic* g,
                           struct geod_polygon* p,
                           real azi, real s) {
-  if (p->num) {                 /* Do nothing is num is zero */
-    real lat, lon, S12 = 0;  /* Initialize S12 to stop Visual Studio warning */
+  if (p->num) {              /* Do nothing is num is zero */
+    /* Initialize S12 to stop Visual Studio warning.  Initialization of lat and
+     * lon is to make CLang static analyzer happy. */
+    real lat = 0, lon = 0, S12 = 0;
     geod_gendirect(g, p->lat, p->lon, azi, GEOD_LONG_UNROLL, s,
                    &lat, &lon, 0,
                    0, 0, 0, 0, p->polyline ? 0 : &S12);
@@ -2005,7 +2047,9 @@ unsigned geod_polygon_testedge(const struct geod_geodesic* g,
   tempsum = p->A[0];
   crossings = p->crossings;
   {
-    real lat, lon, s12, S12;
+    /* Initialization of lat, lon, and S12 is to make CLang static analyzer
+       happy. */
+    real lat = 0, lon = 0, s12, S12 = 0;
     geod_gendirect(g, p->lat, p->lon, azi, GEOD_LONG_UNROLL, s,
                    &lat, &lon, 0,
                    0, 0, 0, 0, &S12);

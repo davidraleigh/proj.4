@@ -26,13 +26,11 @@ endif(NOT USE_THREAD)
 find_package(Threads QUIET)
 if(USE_THREAD AND Threads_FOUND AND CMAKE_USE_WIN32_THREADS_INIT )
    add_definitions( -DMUTEX_win32)
-endif(USE_THREAD AND Threads_FOUND AND CMAKE_USE_WIN32_THREADS_INIT )
-if(USE_THREAD AND Threads_FOUND AND CMAKE_USE_PTHREADS_INIT )
+elseif(USE_THREAD AND Threads_FOUND AND CMAKE_USE_PTHREADS_INIT )
    add_definitions( -DMUTEX_pthread)
-endif(USE_THREAD AND Threads_FOUND AND CMAKE_USE_PTHREADS_INIT )
-if(USE_THREAD AND NOT Threads_FOUND)
+elseif(USE_THREAD AND NOT Threads_FOUND)
   message(FATAL_ERROR "No thread library found and thread/mutex support is required by USE_THREAD option")
-endif(USE_THREAD AND NOT Threads_FOUND)
+endif()
 
 
 ##############################################
@@ -69,6 +67,7 @@ SET(SRC_LIBPROJ_PJ
         PJ_eck5.c
         PJ_eqc.c
         PJ_eqdc.c
+        PJ_eqearth.c
         PJ_fahey.c
         PJ_fouc_s.c
         PJ_gall.c
@@ -185,7 +184,6 @@ SET(SRC_LIBPROJ_CORE
         pj_errno.c
         pj_factors.c
         pj_fwd.c
-        pj_fwd3d.c
         pj_gauss.c
         pj_gc_reader.c
         pj_geocent.c
@@ -196,11 +194,11 @@ SET(SRC_LIBPROJ_CORE
         pj_init.c
         pj_initcache.c
         pj_inv.c
-        pj_inv3d.c
         pj_list.c
         pj_list.h
         pj_log.c
         pj_malloc.c
+        pj_math.c
         pj_mlfn.c
         pj_msfn.c
         pj_mutex.c
@@ -220,6 +218,7 @@ SET(SRC_LIBPROJ_CORE
         pj_utils.c
         pj_zpoly1.c
         proj_mdist.c
+        proj_math.h
         proj_rouss.c
         rtodms.c
         vector1.c
@@ -258,8 +257,7 @@ if(JNI_SUPPORT)
   set(SRC_LIBPROJ_CORE ${SRC_LIBPROJ_CORE}
                        jniproj.c )
   set(HEADERS_LIBPROJ ${HEADERS_LIBPROJ}
-                        org_proj4_PJ.h
-                        org_proj4_Projections.h)
+                        org_proj4_PJ.h)
   source_group("Source Files\\JNI" FILES ${SRC_LIBPROJ_JNI})
   add_definitions(-DJNI_ENABLED)
   include_directories( ${JNI_INCLUDE_DIRS})
@@ -286,6 +284,10 @@ add_library( ${PROJ_CORE_TARGET}
                     ${ALL_LIBPROJ_HEADERS}
                     ${PROJ_RESOURCES}  )
 
+if (NOT CMAKE_VERSION VERSION_LESS 2.8.11)
+  target_include_directories (${PROJ_CORE_TARGET} INTERFACE
+    $<INSTALL_INTERFACE:${INCLUDEDIR}>)
+endif ()
 
 if(WIN32)
   set_target_properties(${PROJ_CORE_TARGET}
@@ -314,7 +316,8 @@ set_target_properties(${PROJ_CORE_TARGET}
 ##############################################
 # Link properties
 ##############################################
-set(PROJ_LIBRARIES ${PROJ_CORE_TARGET} )
+set(PROJ_LIBRARIES ${PROJ_CORE_TARGET})
+set(PROJ_LIBRARIES ${PROJ_LIBRARIES} PARENT_SCOPE) # hack, required for test/unit
 if(UNIX)
     find_library(M_LIB m)
     if(M_LIB)

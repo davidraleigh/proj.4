@@ -1,5 +1,8 @@
-#include <projects.h>
-/* meridinal distance for ellipsoid and inverse
+#include <math.h>
+
+#include "projects.h"
+
+/* meridional distance for ellipsoid and inverse
 **	8th degree - accurate to < 1e-5 meters when used in conjunction
 **		with typical major axis values.
 **	Inverse determines phi to EPS (1e-11) radians, about 1e-6 seconds.
@@ -56,6 +59,6 @@ pj_inv_mlfn(projCtx ctx, double arg, double es, double *en) {
 		if (fabs(t) < EPS)
 			return phi;
 	}
-	pj_ctx_set_errno( ctx, -17 );
+	pj_ctx_set_errno( ctx, PJD_ERR_NON_CONV_INV_MERI_DIST );
 	return phi;
 }

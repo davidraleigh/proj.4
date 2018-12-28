@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(goode, "Goode Homolosine") "\n\tPCyl, Sph.";
@@ -17,7 +20,7 @@ struct pj_opaque {
 
 
 static XY s_forward (LP lp, PJ *P) {           /* Spheroidal, forward */
-    XY xy = {0.0,0.0};
+    XY xy;
     struct pj_opaque *Q = P->opaque;
 
     if (fabs(lp.phi) <= PHI_LIM)
@@ -31,7 +34,7 @@ static XY s_forward (LP lp, PJ *P) {           /* Spheroidal, forward */
 
 
 static LP s_inverse (XY xy, PJ *P) {           /* Spheroidal, inverse */
-    LP lp = {0.0,0.0};
+    LP lp;
     struct pj_opaque *Q = P->opaque;
 
     if (fabs(xy.y) <= PHI_LIM)
@@ -77,5 +80,3 @@ PJ *PROJECTION(goode) {
 
     return P;
 }
-
-

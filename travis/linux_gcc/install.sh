@@ -4,5 +4,4 @@ set -e
 
 export CCACHE_CPP2=yes
 
-#  -Wfloat-conversion not available for gcc 4.8
-CC="ccache gcc" CFLAGS="-g -Wall -Wextra -Werror -Wunused-parameter -Wmissing-prototypes -Wmissing-declarations -Wformat -Werror=format-security -Wshadow -O2" ./travis/install.sh
+CC="ccache gcc" CXX="ccache g++" CFLAGS="-std=c89 -Werror" CXXFLAGS="-Werror" ./travis/install.sh

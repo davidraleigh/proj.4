@@ -84,7 +84,7 @@ opt_eof_handler (o):
 
 Usage is probably easiest understood by a brief textbook style example:
 
-Consider a simple program taking the conventinal "-v, -h, -o" options
+Consider a simple program taking the conventional "-v, -h, -o" options
 indicating "verbose output", "help please", and "output file specification",
 respectively.
 
@@ -183,15 +183,12 @@ Thomas Knudsen, thokn@sdfe.dk, 2016-05-25/2017-09-10
 * DEALINGS IN THE SOFTWARE.
 
 ***********************************************************************/
-
-#define PJ_LIB__
-#include <proj.h>
+#include <ctype.h>
+#include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-#include <math.h>
-#include <errno.h>
 
 /**************************************************************************************************/
 struct OPTARGS;
@@ -417,6 +414,7 @@ const char *opt_strip_path (const char *full_name) {
 /* split command line options into options/flags ("-" style), projdefs ("+" style) and input file args */
 OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, const char **longflags, const char **longkeys) {
     int i, j;
+    int free_format;
     OPTARGS *o;
 
     o = (OPTARGS *) calloc (1, sizeof(OPTARGS));
@@ -442,7 +440,8 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
     o->longkeys   =  longkeys;
 
 
-    /* check aliases, An end user should never experience this, but the developer should make sure that aliases are valid */
+    /* check aliases, An end user should never experience this, but */
+    /* the developer should make sure that aliases are valid */
     for (i = 0;  longflags && longflags[i]; i++) {
         /* Go on if it does not look like an alias */
         if (strlen (longflags[i]) < 3)
@@ -500,6 +499,7 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
 
         if ('-' != argv[i][0])
             break;
+
         if (0==o->margv)
             o->margv = argv + i;
         o->margc++;
@@ -516,34 +516,45 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
                 char *equals;
                 crepr = argv[i] + 2;
 
-                /* need to maniplulate a bit to support gnu style --pap=pop syntax */
+                /* We need to manipulate a bit to support gnu style --foo=bar syntax.   */
+                /* NOTE: This will segfault for read-only (const char * style) storage, */
+                /* but since the canonical use case, int main (int argc, char **argv),  */
+                /* is non-const, we ignore this for now */
                 equals = strchr (crepr, '=');
                 if (equals)
                     *equals = 0;
                 c = opt_ordinal (o, crepr);
-                if (0==c)
-                    return fprintf (stderr, "Invalid option \"%s\"\n", crepr), (OPTARGS *) 0;
+                if (0==c) {
+                    fprintf (stderr, "Invalid option \"%s\"\n", crepr);
+                    return (OPTARGS *) 0;
+                }
 
                 /* inline (gnu) --foo=bar style arg */
                 if (equals) {
                     *equals = '=';
-                    if (opt_is_flag (o, c))
-                        return fprintf (stderr, "Option \"%s\" takes no arguments\n", crepr), (OPTARGS *) 0;
+                    if (opt_is_flag (o, c)) {
+                        fprintf (stderr, "Option \"%s\" takes no arguments\n", crepr);
+                        return (OPTARGS *) 0;
+                    }
                     o->optarg[c] = equals + 1;
                     break;
                 }
 
                 /* "outline" --foo bar style arg */
                 if (!opt_is_flag (o, c)) {
-                    if ((argc==i + 1) || ('+'==argv[i+1][0]) || ('-'==argv[i+1][0]))
-                        return fprintf (stderr, "Missing argument for option \"%s\"\n", crepr), (OPTARGS *) 0;
+                    if ((argc==i + 1) || ('+'==argv[i+1][0]) || ('-'==argv[i+1][0])) {
+                        fprintf (stderr, "Missing argument for option \"%s\"\n", crepr);
+                        return (OPTARGS *) 0;
+                    }
                     o->optarg[c] = argv[i + 1];
                     i++; /* eat the arg */
                     break;
                 }
 
-                if (!opt_is_flag (o, c))
-                    return fprintf (stderr, "Expected flag style long option here, but got \"%s\"\n", crepr), (OPTARGS *) 0;
+                if (!opt_is_flag (o, c)) {
+                    fprintf (stderr, "Expected flag style long option here, but got \"%s\"\n", crepr);
+                    return (OPTARGS *) 0;
+                }
 
                 /* Flag style option, i.e. taking no arguments */
                 opt_raise_flag (o, c);
@@ -551,8 +562,10 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
             }
 
             /* classic short options */
-            if (0==o->optarg[c])
-                return fprintf (stderr, "Invalid option \"%s\"\n", crepr), (OPTARGS *) 0;
+            if (0==o->optarg[c]) {
+                fprintf (stderr, "Invalid option \"%s\"\n", crepr);
+                return (OPTARGS *) 0;
+            }
 
             /* Flag style option, i.e. taking no arguments */
             if (opt_is_flag (o, c)) {
@@ -565,7 +578,10 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
             /* argument separate (i.e. "-i 10") */
             if (j + 1==arg_group_size) {
                 if ((argc==i + 1) || ('+'==argv[i+1][0]) || ('-'==argv[i+1][0]))
-                    return fprintf (stderr, "Bad or missing arg for option \"%s\"\n", crepr), (OPTARGS *) 0;
+                {
+                    fprintf (stderr, "Bad or missing arg for option \"%s\"\n", crepr);
+                    return (OPTARGS *) 0;
+                }
                 o->optarg[(int) c] = argv[i + 1];
                 i++;
                 break;
@@ -579,6 +595,24 @@ OPTARGS *opt_parse (int argc, char **argv, const char *flags, const char *keys, 
 
     /* Process all '+'-style options, starting from where '-'-style processing ended */
     o->pargv = argv + i;
+
+    /* Is free format in use, instead of plus-style? */
+    free_format = 0;
+    for (j = 1;  j < argc;  j++) {
+        if (0==strcmp ("--", argv[j])) {
+            free_format = j;
+            break;
+        }
+    }
+
+    if (free_format) {
+        o->pargc = free_format - (o->margc + 1);
+        o->fargc = argc - (free_format + 1);
+        if (0 != o->fargc)
+            o->fargv = argv + free_format + 1;
+        return o;
+    }
+
     for (/* empty */; i < argc; i++) {
         if ('-' == argv[i][0]) {
             free (o);

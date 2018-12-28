@@ -1,7 +1,8 @@
 #define PJ_LIB__
 #include <errno.h>
-#include <proj.h>
+#include "proj.h"
 #include "projects.h"
+#include "proj_math.h"
 
 PROJ_HEAD(lcc, "Lambert Conformal Conic")
     "\n\tConic, Sph&Ell\n\tlat_1= and lat_2= or lat_0";

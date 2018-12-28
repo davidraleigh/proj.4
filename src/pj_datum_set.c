@@ -26,8 +26,9 @@
  *****************************************************************************/
 
 #include <errno.h>
-#include <projects.h>
 #include <string.h>
+
+#include "projects.h"
 
 /* SEC_TO_RAD = Pi/180/3600 */
 #define SEC_TO_RAD 4.84813681109535993589914102357e-6
@@ -61,11 +62,17 @@ int pj_datum_set(projCtx ctx, paralist *pl, PJ *projdef)
 
         /* find the end of the list, so we can add to it */
         for (curr = pl; curr && curr->next ; curr = curr->next) {}
-        
+
+        /* cannot happen in practice, but makes static analyzers happy */
+        if( !curr ) return -1;
+
         /* find the datum definition */
         for (i = 0; (s = pj_datums[i].id) && strcmp(name, s) ; ++i) {}
 
-        if (!s) { pj_ctx_set_errno(ctx, -9); return 1; }
+        if (!s) {
+            pj_ctx_set_errno(ctx, PJD_ERR_UNKNOWN_ELLP_PARAM);
+            return 1;
+        }
 
         if( pj_datums[i].ellipse_id && strlen(pj_datums[i].ellipse_id) > 0 )
         {
@@ -81,12 +88,15 @@ int pj_datum_set(projCtx ctx, paralist *pl, PJ *projdef)
         
         if( pj_datums[i].defn && strlen(pj_datums[i].defn) > 0 )
             curr = curr->next = pj_mkparam(pj_datums[i].defn);
+
+        (void)curr; /* make clang static analyzer happy */
     }
 
 /* -------------------------------------------------------------------- */
 /*      Check for nadgrids parameter.                                   */
 /* -------------------------------------------------------------------- */
-    if( (nadgrids = pj_param(ctx, pl,"snadgrids").s) != NULL )
+    nadgrids = pj_param(ctx, pl,"snadgrids").s;
+    if( nadgrids != NULL )
     {
         /* We don't actually save the value separately.  It will continue
            to exist int he param list for use in pj_apply_gridshift.c */

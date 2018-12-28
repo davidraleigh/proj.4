@@ -19,67 +19,39 @@ brew install ant
 
 Change directories into the proj.4 directory and execute the following to build proj.4 and copy the proj.4 jar into `/usr/local/lib`:
 ```bash
+export PROJ_DIR=/usr/local/Cellar/proj/5.2.0
 export JAVA_HOME="$(/usr/libexec/java_home)"
 autoreconf -i
-CFLAGS=-I$JAVA_HOME/include/darwin ./configure --with-jni=$JAVA_HOME/include
-make
+CFLAGS=-I$JAVA_HOME/include/darwin ./configure --with-jni=$JAVA_HOME/include --prefix=$PROJ_DIR
+make -j 8
 make install
 cd jniwrap
-ant
-cp ./libs/jproj.jar /usr/local/lib/
+ant -v
+cp ./out/proj.jar $PROJ_DIR/lib/proj.jar
+brew link proj
 ```
 
 ## Building your own Docker Image
 The Docker images are based off of the [openjdk](https://hub.docker.com/_/openjdk/) images. You can build a jdk image or a jre image, you can use Java 8 or 10 (maybe 11, haven't tested), and you can use debian or alpine.
 
 ### Building Debian
-To build the latest debian 8 jdk image:
+To build the latest debian 11 jdk image:
 ```bash
-docker build -t us.gcr.io/echoparklabs/proj.4:8-jdk-slim .
+docker build -t us.gcr.io/echoparklabs/proj.4:11-jdk-slim .
 ```
-The latest debian 8 jre image
+The latest debian 11 jre image
 ```bash
-docker build --build-arg JRE_TAG=8-jre-slim -t echoparklabs/proj.4:8-jre-slim .
-```
-To build the latest debian 10 jdk:
-```bash
-docker build --build-arg JDK_TAG=10-jdk-slim -t echoparklabs/proj.4:10-jdk-slim .
-```
-To build the latest debian 10 jre:
-```bash
-docker build --build-arg JDK_TAG=10-jdk-slim --build-arg JRE_TAG=10-jre-slim \
-       -t echoparklabs/proj.4:10-jdk-slim .
+docker build --build-arg JRE_TAG=11-jre-slim -t echoparklabs/proj.4:11-jre-slim .
 ```
 
 
 ### Building Alpine
-At this time, the resulting Alpine docker image is about 50% smaller than the slim debian images. The default Alpine image uses the `8-jdk-apline` image
+At this time, the resulting Alpine docker image is about 50% smaller than the slim debian images. The default Alpine image uses the `12-jdk-apline` image
 
-To build the latest Alpine JDK 8 image:
+To build the latest Alpine JDK 12 image:
 ```bash
-docker build -t echoparklabs/proj.4:8-jdk-alpine -f Dockerfile.alpine .
+docker build -t echoparklabs/proj.4:12-jdk-alpine -f Dockerfile.alpine .
 ```
 
-To build the latest Alpine JRE image use the jre tag with a `--build-arg` (it will default to the latest JDK 8 alpine image):
-```bash
-docker build --build-arg JRE_TAG=8-jre-alpine \
-       -t echoparklabs/proj.4:8-jre-alpine -f Dockerfile.alpine .
-```
-
-
-### Building with specific Debian JDK or JRE docker images:
-
-To build a specific Alpine JDK 8 image use the `--build-arg`. For example if you wanted to build off of the `8u171-jdk-alpine3.8` openjdk image:
-```bash
-docker build --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t echoparklabs/proj.4:8u171-jdk-alpine3.8 -f Dockerfile.alpine .
-```
-
-And to build a specific jre image use the following `--build-args`. For example if you wanted to the `8u171-jre-alpine3.8`  you would need to also specifiy `8u171-jdk-alpine3.8` JDK:
-```bash
-docker build --build-arg JRE_TAG=8u171-jre-alpine3.8 \
-       --build-arg JDK_TAG=8u171-jdk-alpine3.8 \
-       -t echoparklabs/proj.4:8u171-jre-alpine3.8 -f Dockerfile.alpine .
-```
 
 

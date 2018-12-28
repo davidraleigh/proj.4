@@ -1,10 +1,13 @@
 /* list of projection system pj_errno values */
-#include "projects.h"
+
+#include <stddef.h>
 #include <stdio.h>
-#include <errno.h>
 #include <string.h>
 
-    static char *
+#include "proj.h"
+#include "projects.h"
+
+static const char * const
 pj_err_list[] = {
     "no arguments in initialization list",                             /*  -1 */
     "no options found in 'init' file",                                 /*  -2 */
@@ -64,12 +67,14 @@ pj_err_list[] = {
     "ellipsoidal usage unsupported",                                   /* -56 */
     "only one +init allowed for non-pipeline operations",              /* -57 */
     "argument not numerical or out of range",                          /* -58 */
+    "inconsistent unit type between input and output",                 /* -59 */
 
     /* When adding error messages, remember to update ID defines in
        projects.h, and transient_error array in pj_transform                  */
 };
 
 char *pj_strerrno(int err) {
+    const int max_error = 9999;
     static char note[50];
     size_t adjusted_err;
 
@@ -83,16 +88,22 @@ char *pj_strerrno(int err) {
 #else
         /* Defend string boundary against exorbitantly large err values */
         /* which may occur on platforms with 64-bit ints */
-        sprintf(note,"no system list, errno: %d\n", (err < 9999)? err: 9999);
+        sprintf(note, "no system list, errno: %d\n",
+                (err < max_error) ? err: max_error);
         return note;
 #endif
     }
 
-    /* PROJ.4 error codes are negative */
-    adjusted_err = - err - 1;
+    /* PROJ.4 error codes are negative: -1 to -9999 */
+    adjusted_err = err < -max_error ? max_error : -err - 1;
     if (adjusted_err < (sizeof(pj_err_list) / sizeof(char *)))
-        return(pj_err_list[adjusted_err]);
+        return (char *)pj_err_list[adjusted_err];
 
-    sprintf( note, "invalid projection system error (%d)", (err > -9999)? err: -9999);
+    sprintf(note, "invalid projection system error (%d)",
+            (err > -max_error) ? err: -max_error);
     return note;
+}
+
+const char* proj_errno_string(int err) {
+    return pj_strerrno(err);
 }

@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(hammer, "Hammer & Eckert-Greifendorff")
@@ -70,4 +73,3 @@ PJ *PROJECTION(hammer) {
 
     return P;
 }
-

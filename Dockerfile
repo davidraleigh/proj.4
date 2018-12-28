@@ -1,4 +1,4 @@
-ARG JDK_TAG=8-jdk-slim
+ARG JDK_TAG=11-jdk-slim
 ARG JRE_TAG=${JDK_TAG}
 
 FROM openjdk:${JDK_TAG} as builder
@@ -29,8 +29,8 @@ RUN ./autogen.sh && \
     make -j 8 && \
     make install && \
     cd jniwrap && \
-    ant && \
-    mv /opt/src/proj.4/jniwrap/libs/jproj.jar /usr/local/lib/
+    ant -v && \
+    mv /opt/src/proj.4/jniwrap/out/proj.jar /usr/local/lib/
 
 # Horizontal datums to improve test results
 WORKDIR /usr/local/share/proj
@@ -45,20 +45,6 @@ RUN make check && \
 # TODO move to testing
     make multistresstest && \
     make test228
-
-#RUN ./multistresstest
-#WORKDIR /opt/src/proj.4/nad
-
-# TODO move to testing
-RUN apt update && apt install -y python3
-RUN apt-get install -y python3-pip
-RUN apt-get install -y python3-dev
-
-RUN pip3 install -v --user pyproj
-WORKDIR /opt/src/proj.4/test/gigs
-RUN python3 test_json.py --test conversion 5101.1-jhs.json 5101.4-jhs-etmerc.json 5105.2.json 5106.json 5108.json 5110.json 5111.1.json
-RUN python3 test_json.py 5101.2-jhs.json 5101.3-jhs.json 5102.1.json 5103.1.json 5103.2.json 5103.3.json 5107.json 5109.json 5112.json 5113.json 5201.json 5208.json
-# TODO move to testing
 
 
 ## Production build

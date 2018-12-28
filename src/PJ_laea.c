@@ -1,7 +1,8 @@
 #define PJ_LIB__
 #include <errno.h>
-#include <proj.h>
+#include "proj.h"
 #include "projects.h"
+#include "proj_math.h"
 
 PROJ_HEAD(laea, "Lambert Azimuthal Equal Area") "\n\tAzi, Sph&Ell";
 
@@ -26,8 +27,6 @@ struct pj_opaque {
 };
 
 #define EPS10   1.e-10
-#define NITER   20
-#define CONV    1.e-10
 
 static XY e_forward (LP lp, PJ *P) {          /* Ellipsoidal, forward */
     XY xy = {0.0,0.0};

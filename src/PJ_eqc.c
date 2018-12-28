@@ -1,6 +1,9 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 struct pj_opaque {
@@ -47,5 +50,3 @@ PJ *PROJECTION(eqc) {
 
     return P;
 }
-
-

@@ -1,7 +1,11 @@
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
+#include "proj_math.h"
 
 PROJ_HEAD(gnom, "Gnomonic") "\n\tAzi, Sph.";
 
@@ -137,4 +141,3 @@ PJ *PROJECTION(gnom) {
 
     return P;
 }
-

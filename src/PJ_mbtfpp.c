@@ -1,5 +1,8 @@
 #define PJ_LIB__
-#include <proj.h>
+
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(mbtfpp, "McBride-Thomas Flat-Polar Parabolic") "\n\tCyl., Sph.";
@@ -60,4 +63,3 @@ PJ *PROJECTION(mbtfpp) {
 
     return P;
 }
-

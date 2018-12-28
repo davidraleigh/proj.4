@@ -46,8 +46,11 @@
 *****************************************************************************/
 
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(lcca, "Lambert Conformal Conic Alternative")
@@ -157,4 +160,3 @@ PJ *PROJECTION(lcca) {
 
     return P;
 }
-

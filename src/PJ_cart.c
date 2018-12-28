@@ -41,11 +41,11 @@
  *****************************************************************************/
 
 #define PJ_LIB__
+
 #include "proj_internal.h"
 #include "projects.h"
-#include <stddef.h>
-#include <math.h>
-#include <errno.h>
+#include "proj_math.h"
+
 PROJ_HEAD(cart,    "Geodetic/cartesian conversions");
 
 
@@ -64,7 +64,7 @@ PROJ_HEAD(cart,    "Geodetic/cartesian conversions");
     and
 
     Wikipedia: Geographic Coordinate Conversion,
-    https://en.m.wikipedia.org/wiki/Geographic_coordinate_conversion
+    https://en.wikipedia.org/wiki/Geographic_coordinate_conversion
 
     (WP, below).
 
@@ -94,7 +94,7 @@ PROJ_HEAD(cart,    "Geodetic/cartesian conversions");
 
     Wikipedia: Earth Radius
     https://en.wikipedia.org/wiki/Earth_radius#Radius_at_a_given_geodetic_latitude
-    (Derivation and commentary at http://gis.stackexchange.com/questions/20200/how-do-you-compute-the-earths-radius-at-a-given-geodetic-latitude)
+    (Derivation and commentary at https://gis.stackexchange.com/q/20200)
 
     (WP2, below)
 
@@ -131,39 +131,39 @@ static double geocentric_radius (double a, double b, double phi) {
 
 
 /*********************************************************************/
-static XYZ cartesian (LPZ geodetic,  PJ *P) {
+static XYZ cartesian (LPZ geod,  PJ *P) {
 /*********************************************************************/
-    double N, cosphi = cos(geodetic.phi);
+    double N, cosphi = cos(geod.phi);
     XYZ xyz;
 
-    N   =  normal_radius_of_curvature(P->a, P->es, geodetic.phi);
+    N   =  normal_radius_of_curvature(P->a, P->es, geod.phi);
 
     /* HM formula 5-27 (z formula follows WP) */
-    xyz.x = (N + geodetic.z) * cosphi      * cos(geodetic.lam);
-    xyz.y = (N + geodetic.z) * cosphi      * sin(geodetic.lam);
-    xyz.z = (N * (1 - P->es) + geodetic.z) * sin(geodetic.phi);
+    xyz.x = (N + geod.z) * cosphi      * cos(geod.lam);
+    xyz.y = (N + geod.z) * cosphi      * sin(geod.lam);
+    xyz.z = (N * (1 - P->es) + geod.z) * sin(geod.phi);
 
     return xyz;
 }
 
 
 /*********************************************************************/
-static LPZ geodetic (XYZ cartesian,  PJ *P) {
+static LPZ geodetic (XYZ cart,  PJ *P) {
 /*********************************************************************/
     double N, p, theta, c, s;
     LPZ lpz;
 
     /* Perpendicular distance from point to Z-axis (HM eq. 5-28) */
-    p = hypot (cartesian.x, cartesian.y);
+    p = hypot (cart.x, cart.y);
 
     /* HM eq. (5-37) */
-    theta  =  atan2 (cartesian.z * P->a,  p * P->b);
+    theta  =  atan2 (cart.z * P->a,  p * P->b);
 
     /* HM eq. (5-36) (from BB, 1976) */
     c  =  cos(theta);
     s  =  sin(theta);
-    lpz.phi  =  atan2 (cartesian.z + P->e2s*P->b*s*s*s,  p - P->es*P->a*c*c*c);
-    lpz.lam  =  atan2 (cartesian.y, cartesian.x);
+    lpz.phi  =  atan2 (cart.z + P->e2s*P->b*s*s*s,  p - P->es*P->a*c*c*c);
+    lpz.lam  =  atan2 (cart.y, cart.x);
     N        =  normal_radius_of_curvature (P->a, P->es, lpz.phi);
 
 
@@ -174,7 +174,7 @@ static LPZ geodetic (XYZ cartesian,  PJ *P) {
         /* minus the geocentric radius of the Earth at the given */
         /* latitude                                              */
         double r = geocentric_radius (P->a, P->b, lpz.phi);
-        lpz.z = fabs (cartesian.z) - r;
+        lpz.z = fabs (cart.z) - r;
     }
     else
         lpz.z =  p / c  -  N;
@@ -213,8 +213,7 @@ PJ *CONVERSION(cart,1) {
     P->inv3d  =  geodetic;
     P->fwd    =  cart_forward;
     P->inv    =  cart_reverse;
-    P->left   =  PJ_IO_UNITS_RADIANS;
-    P->right  =  PJ_IO_UNITS_METERS;
+    P->left   =  PJ_IO_UNITS_ANGULAR;
+    P->right  =  PJ_IO_UNITS_CARTESIAN;
     return P;
 }
-

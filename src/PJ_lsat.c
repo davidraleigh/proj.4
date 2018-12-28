@@ -1,7 +1,10 @@
 /* based upon Snyder and Linck, USGS-NMD */
 #define PJ_LIB__
+
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(lsat, "Space oblique for LANDSAT")
@@ -61,8 +64,6 @@ static XY e_forward (LP lp, PJ *P) {          /* Ellipsoidal, forward */
         sav = lampp;
         lamtp = lp.lam + Q->p22 * lampp;
         cl = cos(lamtp);
-        if (fabs(cl) < TOL)
-            lamtp -= TOL;
         if( cl < 0 )
             fac = lampp + sin(lampp) * M_HALFPI;
         else
@@ -207,4 +208,3 @@ PJ *PROJECTION(lsat) {
 
     return P;
 }
-

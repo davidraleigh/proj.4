@@ -1,5 +1,8 @@
 #define PJ_LIB__
-#include <proj.h>
+
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(collg, "Collignon") "\n\tPCyl, Sph.";
@@ -48,4 +51,3 @@ PJ *PROJECTION(collg) {
 
     return P;
 }
-

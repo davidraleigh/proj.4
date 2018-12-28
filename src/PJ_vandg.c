@@ -1,12 +1,11 @@
 #define PJ_LIB__
-#include <proj.h>
+#include "proj.h"
 #include "projects.h"
 
 PROJ_HEAD(vandg, "van der Grinten (I)") "\n\tMisc Sph";
 
 # define TOL        1.e-10
 # define THIRD      .33333333333333333333
-# define TWO_THRD   .66666666666666666666
 # define C2_27      .07407407407407407407
 # define PI4_3      4.18879020478639098458
 # define PISQ       9.86960440108935861869

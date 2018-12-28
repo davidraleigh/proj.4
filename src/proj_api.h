@@ -25,18 +25,16 @@
  * DEALINGS IN THE SOFTWARE.
  *****************************************************************************/
 
-
-
- /*
+/*
   * This version number should be updated with every release!
   *
   * This file is expected to be removed from the PROJ distribution
   * when a few minor-version releases has been made.
   *
   */
- #ifndef PJ_VERSION
- #define PJ_VERSION 500
- #endif
+#ifndef PJ_VERSION
+#define PJ_VERSION 520
+#endif
 
 
 /* If we're not asked for PJ_VERSION only, give them everything */
@@ -45,14 +43,15 @@
 #ifndef PROJ_API_H
 #define PROJ_API_H
 
+/* standard inclusions */
+#include <math.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-/* standard inclusions */
-#include <math.h>
-#include <stdlib.h>
 
 
 /* pj_init() and similar functions can be used with a non-C locale */
@@ -84,10 +83,18 @@ extern int pj_errno;    /* global error return code */
     /* These make the function declarations below conform with classic proj */
     typedef PJ *projPJ;          /* projPJ is a pointer to PJ */
     typedef struct projCtx_t *projCtx;  /* projCtx is a pointer to projCtx_t */
-#   define projXY        XY
+#ifdef PROJ_H
+#   define projXY       PJ_XY
+#   define projLP       PJ_LP
+#   define projXYZ      PJ_XYZ
+#   define projLPZ      PJ_LPZ
+#else
+#   define projXY       XY
 #   define projLP       LP
 #   define projXYZ      XYZ
 #   define projLPZ      LPZ
+#endif
+
 #else
     /* i.e. proj_api invoked as primary API */
     typedef struct { double u, v; } projUV;
@@ -155,6 +162,7 @@ projPJ pj_init_ctx( projCtx, int, char ** );
 projPJ pj_init_plus_ctx( projCtx, const char * );
 char *pj_get_def(projPJ, int);
 projPJ pj_latlong_from_proj( projPJ );
+int pj_has_inverse(projPJ);
 
 
 void *pj_malloc(size_t);

@@ -29,8 +29,12 @@
 
 #define PJ_LIB__
 #include <errno.h>
-#include <proj.h>
+#include <math.h>
+#include <stddef.h>
+
+#include "proj.h"
 #include "projects.h"
+#include "proj_math.h"
 
 struct pj_opaque {
     double h;
@@ -199,14 +203,12 @@ PJ *PROJECTION(geos) {
     if ((Q->h = pj_param(P->ctx, P->params, "dh").f) <= 0.)
         return pj_default_destructor (P, PJD_ERR_H_LESS_THAN_ZERO);
 
-    if (P->phi0 != 0.0)
-        return pj_default_destructor (P, PJD_ERR_UNKNOWN_PRIME_MERIDIAN);
-
     sweep_axis = pj_param(P->ctx, P->params, "ssweep").s;
     if (sweep_axis == NULL)
       Q->flip_axis = 0;
     else {
-        if (sweep_axis[1] != '\0' || (sweep_axis[0] != 'x' && sweep_axis[0] != 'y'))
+        if ((sweep_axis[0] != 'x' && sweep_axis[0] != 'y') ||
+            sweep_axis[1] != '\0')
             return pj_default_destructor (P, PJD_ERR_INVALID_SWEEP_AXIS);
 
         if (sweep_axis[0] == 'x')
@@ -232,5 +234,3 @@ PJ *PROJECTION(geos) {
 
     return P;
 }
-
-

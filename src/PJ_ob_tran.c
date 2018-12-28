@@ -1,8 +1,11 @@
 #define PJ_LIB__
 #include <errno.h>
-#include <proj.h>
-#include "projects.h"
+#include <math.h>
+#include <stddef.h>
 #include <string.h>
+
+#include "proj.h"
+#include "projects.h"
 
 struct pj_opaque {
     struct PJconsts *link;
@@ -48,11 +51,11 @@ static XY t_forward(LP lp, PJ *P) {             /* spheroid */
 
 
 static LP o_inverse(XY xy, PJ *P) {             /* spheroid */
-    LP lp = {0.0,0.0};
+
     struct pj_opaque *Q = P->opaque;
     double coslam, sinphi, cosphi;
 
-    lp = Q->link->inv(xy, Q->link);
+    LP lp = Q->link->inv(xy, Q->link);
     if (lp.lam != HUGE_VAL) {
         coslam = cos(lp.lam -= Q->lamp);
         sinphi = sin(lp.phi);
@@ -66,11 +69,11 @@ static LP o_inverse(XY xy, PJ *P) {             /* spheroid */
 
 
 static LP t_inverse(XY xy, PJ *P) {             /* spheroid */
-    LP lp = {0.0,0.0};
+
     struct pj_opaque *Q = P->opaque;
     double cosphi, t;
 
-    lp = Q->link->inv(xy, Q->link);
+    LP lp = Q->link->inv(xy, Q->link);
     if (lp.lam != HUGE_VAL) {
         cosphi = cos(lp.phi);
         t = lp.lam - Q->lamp;
@@ -170,11 +173,6 @@ PJ *PROJECTION(ob_tran) {
     P->opaque = Q;
     P->destructor = destructor;
 
-#if 0
-    if (0 != P->es)
-        return destructor(P, PJD_ERR_ELLIPSOIDAL_UNSUPPORTED);
-#endif
-
     /* get name of projection to be translated */
     if (!(name = pj_param(P->ctx, P->params, "so_proj").s))
         return destructor(P, PJD_ERR_NO_ROTATION_PROJ);
@@ -235,6 +233,11 @@ PJ *PROJECTION(ob_tran) {
         P->inv = Q->link->inv ? t_inverse : 0;
     }
 
+    /* Support some rather speculative test cases, where the rotated projection */
+    /* is actually latlong. We do not want scaling in that case... */
+    if (Q->link->right==PJ_IO_UNITS_ANGULAR)
+        P->right = PJ_IO_UNITS_PROJECTED;
+
+
     return P;
 }
-

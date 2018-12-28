@@ -8,9 +8,11 @@ cache:
 matrix:
   fast_finish: true
   include:
+
     - os: linux
+      dist: trusty
       compiler: gcc
-      language: c
+      language: cpp
       sudo: required
       services:
         - docker
@@ -18,8 +20,9 @@ matrix:
         - BUILD_NAME=linux_gcc
         - DETAILS="linux, gcc"
     - os: linux
+      dist: trusty
       compiler: clang
-      language: c
+      language: cpp
       sudo: required
       services:
         - docker
@@ -27,20 +30,29 @@ matrix:
         - BUILD_NAME=linux_clang
         - DETAILS="linux, clang"
     - os: osx
-      language: c
+      language: cpp
       env:
         - BUILD_NAME=osx
         - DETAILS="osx"
     - os: linux
+      dist: trusty
       compiler: gcc
-      language: c
+      language: cpp
       sudo: required
       env:
         - BUILD_NAME=mingw32
         - DETAILS="mingw32"
 
-#  allow_failures:
-#    - os: osx
+    - os: linux
+      compiler: gcc
+      language: cpp
+      dist: trusty
+      env:
+        - BUILD_NAME=csa
+        - DETAILS="CLang Static Analyzer"
+
+  allow_failures:
+      - env: BUILD_NAME=mingw32
 
 before_install: ./travis/${BUILD_NAME}/before_install.sh
 

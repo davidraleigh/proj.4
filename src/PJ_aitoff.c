@@ -29,8 +29,11 @@
  *****************************************************************************/
 
 #define PJ_LIB__
-#include <proj.h>
+
 #include <errno.h>
+#include <math.h>
+
+#include "proj.h"
 #include "projects.h"
 
 
@@ -141,7 +144,7 @@ static LP s_inverse (XY xy, PJ *P) {           /* Spheroidal, inverse */
             y *= D * sin(lp.phi);
         } else
             x = y = 0.;
-        if (Q->mode) { /* Winkel Tripel */
+        if (Q->mode == WINKEL_TRIPEL) {
             x = (x + lp.lam * Q->cosphi1) * 0.5;
             y = (y + lp.phi) * 0.5;
         }
@@ -192,5 +195,3 @@ PJ *PROJECTION(wintri) {
         Q->cosphi1 = 0.636619772367581343;
     return setup(P);
 }
-
-

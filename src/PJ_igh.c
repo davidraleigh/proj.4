@@ -1,5 +1,8 @@
 #define PJ_LIB__
+
 #include <errno.h>
+#include <math.h>
+
 #include "projects.h"
 
 PROJ_HEAD(igh, "Interrupted Goode Homolosine") "\n\tPCyl, Sph.";
@@ -36,7 +39,7 @@ struct pj_opaque {
 
 
 static XY s_forward (LP lp, PJ *P) {           /* Spheroidal, forward */
-    XY xy = {0.0,0.0};
+    XY xy;
     struct pj_opaque *Q = P->opaque;
     int z;
 
@@ -220,5 +223,3 @@ PJ *PROJECTION(igh) {
 
     return P;
 }
-
-

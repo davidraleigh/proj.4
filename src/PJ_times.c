@@ -30,7 +30,10 @@
  *****************************************************************************/
 
 #define PJ_LIB__
-#include <projects.h>
+
+#include <math.h>
+
+#include "projects.h"
 
 PROJ_HEAD(times, "Times") "\n\tCyl, Sph";
 
@@ -74,4 +77,3 @@ PJ *PROJECTION(times) {
 
     return P;
 }
-

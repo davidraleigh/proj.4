@@ -30,8 +30,10 @@
 
 #define PJ_LIB__
 
-#include <string.h>
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "proj_internal.h"
 #include "projects.h"
 
@@ -174,7 +176,7 @@ static struct CTABLE* find_ctable(projCtx ctx, LP input, int grid_count, PJ_GRID
 /*      This is the real workhorse, given a gridlist.                   */
 /************************************************************************/
 
-int pj_apply_gridshift_3( projCtx ctx, PJ_GRIDINFO **tables, int grid_count,
+int pj_apply_gridshift_3( projCtx ctx, PJ_GRIDINFO **gridlist, int gridlist_count,
                           int inverse, long point_count, int point_offset,
                           double *x, double *y, double *z )
 {
@@ -183,7 +185,7 @@ int pj_apply_gridshift_3( projCtx ctx, PJ_GRIDINFO **tables, int grid_count,
     static int debug_count = 0;
     (void) z;
 
-    if( tables == NULL || grid_count == 0 )
+    if( gridlist== NULL || gridlist_count == 0 )
     {
         pj_ctx_set_errno(ctx, PJD_ERR_FAILED_TO_LOAD_GRID);
         return PJD_ERR_FAILED_TO_LOAD_GRID;
@@ -202,14 +204,14 @@ int pj_apply_gridshift_3( projCtx ctx, PJ_GRIDINFO **tables, int grid_count,
         output.phi = HUGE_VAL;
         output.lam = HUGE_VAL;
 
-        ct = find_ctable(ctx, input, grid_count, tables);
+        ct = find_ctable(ctx, input, gridlist_count, gridlist);
         if( ct != NULL )
         {
             output = nad_cvt( input, inverse, ct );
-        }
 
-        if ( output.lam != HUGE_VAL && debug_count++ < 20 )
-            pj_log( ctx, PJ_LOG_DEBUG_MINOR, "pj_apply_gridshift(): used %s", ct->id );
+            if ( output.lam != HUGE_VAL && debug_count++ < 20 )
+                pj_log( ctx, PJ_LOG_DEBUG_MINOR, "pj_apply_gridshift(): used %s", ct->id );
+        }
 
         if ( output.lam == HUGE_VAL )
         {
@@ -220,9 +222,9 @@ int pj_apply_gridshift_3( projCtx ctx, PJ_GRIDINFO **tables, int grid_count,
                     "                      location (%.7fdW,%.7fdN)",
                     x[io] * RAD_TO_DEG,
                     y[io] * RAD_TO_DEG );
-                for( itable = 0; itable < grid_count; itable++ )
+                for( itable = 0; itable < gridlist_count; itable++ )
                 {
-                    PJ_GRIDINFO *gi = tables[itable];
+                    PJ_GRIDINFO *gi = gridlist[itable];
                     if( itable == 0 )
                         pj_log( ctx, PJ_LOG_DEBUG_MAJOR, "   tried: %s", gi->gridname );
                     else
@@ -306,13 +308,18 @@ int proj_hgrid_init(PJ* P, const char *grids) {
 /********************************************/
 LP proj_hgrid_value(PJ *P, LP lp) {
     struct CTABLE *ct;
-    LP out;
+    LP out = proj_coord_error().lp;
 
     ct = find_ctable(P->ctx, lp, P->gridlist_count, P->gridlist);
+    if (ct == 0) {
+        pj_ctx_set_errno( P->ctx, PJD_ERR_GRID_AREA);
+        return out;
+    }
 
     /* normalize input to ll origin */
     lp.lam -= ct->ll.lam;
     lp.phi -= ct->ll.phi;
+
     lp.lam = adjlon(lp.lam - M_PI) + M_PI;
 
     out = nad_intr(lp, ct);

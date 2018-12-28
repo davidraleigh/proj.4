@@ -14,7 +14,7 @@
  * is described in
  * [LK12]
  * M. Lambers and A. Kolb, "Ellipsoidal Cube Maps for Accurate Rendering of
- * Planetary-Scale Terrain Data", Proc. Pacfic Graphics (Short Papers), Sep.
+ * Planetary-Scale Terrain Data", Proc. Pacific Graphics (Short Papers), Sep.
  * 2012
  *
  * You have to choose one of the following projection centers,
@@ -39,7 +39,10 @@
  */
 
 #define PJ_LIB__
+
 #include <errno.h>
+#include <math.h>
+
 #include "projects.h"
 
 /* The six cube faces. */
@@ -397,4 +400,3 @@ PJ *PROJECTION(qsc) {
 
     return P;
 }
-
